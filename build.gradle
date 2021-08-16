@@ -1,0 +1,62 @@
+buildscript {
+    ext {
+        lombokVersion = '1.18.20'
+        springDependencyVersion = '1.0.10.RELEASE'
+        springBootVersion = '2.5.3'
+        springDocVersion = '1.5.5'
+        swaggerVersion = '2.1.6'
+        flywayVersion = '7.12.1'
+        hsqldbVersion = '2.5.1'
+        mysqldbVersion = '8.0.23'
+        jibPluginVersion = '2.8.0'
+        jUnit5PlatformVersion = '1.7.0'
+        jUnit5EngineVersion = '5.7.0'
+        mockitoVersion = '3.6.28'
+    }
+}
+plugins {
+    id 'java'
+    id "io.spring.dependency-management" version "${springDependencyVersion}"
+}
+
+allprojects {
+    apply plugin: 'java'
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'java-library'
+    apply plugin: 'io.spring.dependency-management'
+
+    dependencyManagement {
+        imports {
+            mavenBom("org.springframework.boot:spring-boot-dependencies:${springBootVersion}")
+        }
+    }
+
+    dependencies {
+        compileOnly "org.projectlombok:lombok:${lombokVersion}"
+        annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+
+        api 'org.slf4j:slf4j-api'
+
+        testImplementation "org.projectlombok:lombok:${lombokVersion}"
+        testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+
+        testImplementation("org.junit.platform:junit-platform-commons:${jUnit5PlatformVersion}")
+        testRuntimeOnly("org.junit.platform:junit-platform-engine:${jUnit5PlatformVersion}")
+        testRuntimeOnly("org.junit.platform:junit-platform-launcher:${jUnit5PlatformVersion}")
+        testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${jUnit5EngineVersion}")
+        testImplementation("org.junit.jupiter:junit-jupiter-api:${jUnit5EngineVersion}")
+        testImplementation("org.mockito:mockito-core:${mockitoVersion}")
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}

@@ -1,0 +1,10 @@
+dependencies {
+    implementation 'org.apache.commons:commons-lang3'
+    implementation 'org.springframework:spring-context'
+    implementation project (':playio-core')
+    implementation project (':playio-persistence-jdbc')
+}
+
+jar {
+    enabled = true
+}

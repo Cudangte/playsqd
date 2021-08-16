@@ -1,0 +1,41 @@
+plugins {
+    id 'com.google.cloud.tools.jib' version "${jibPluginVersion}"
+    id 'org.springframework.boot' version "${springBootVersion}"
+}
+
+dependencies {
+    implementation project(':playio-core')
+    implementation project(':playio-server-api')
+}
+
+jar {
+    enabled = true
+}
+
+bootJar {
+    archiveBaseName = 'playio-web-app'
+    mainClass = 'com.bemonovoid.playio.Application'
+}
+
+jib {
+    allowInsecureRegistries = 'true'
+    from {
+        image = 'openjdk:11-slim'
+        platforms {
+            platform {
+                architecture = 'arm64'
+                os = 'linux'
+            }
+        }
+    }
+    to {
+        image = 'playio-app'
+        tags = ['1.0.0']
+    }
+    container {
+        mainClass = 'com.bemonovoid.playio.Application'
+        ports = ['9585']
+        creationTime = "USE_CURRENT_TIMESTAMP"
+        environment = [SPRING_CONFIG_LOCATION: "/app/config/application.yaml"]
+    }
+}
