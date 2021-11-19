@@ -1,0 +1,13 @@
+dependencies {
+    implementation "javax.validation:validation-api:${javaxValidationVersion}"
+    implementation "org.springframework:spring-web:${springFrameworkVersion}"
+    implementation "org.springdoc:springdoc-openapi-ui:${springDocVersion}"
+
+    implementation project(':playsqd-core')
+    implementation project(':playsqd-persistence-jdbc')
+    implementation project(':playsqd-directory-scanner')
+}
+
+jar {
+    enabled = true
+}

@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: "jdbc:hsqldb:hsql://localhost:9004/playsqd_db"
+    username: bemonovoid
+    password: bemonovoidpwd
+    type: org.hsqldb.jdbc.JDBCPool
+
+playsqd:
+  library:
+    source:
+      local:
+        - "D:/Music/Coldplay"
+        - "D:/Music/Foals"
+logging:
+  level:
+    org.springframework.jdbc.core: TRACE
+    org.hsqldb: TRACE

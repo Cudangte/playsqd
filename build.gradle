@@ -1,17 +1,24 @@
 buildscript {
     ext {
-        lombokVersion = '1.18.20'
-        springDependencyVersion = '1.0.10.RELEASE'
-        springBootVersion = '2.5.3'
-        springDocVersion = '1.5.5'
-        swaggerVersion = '2.1.6'
-        flywayVersion = '7.12.1'
-        hsqldbVersion = '2.5.1'
-        mysqldbVersion = '8.0.23'
-        jibPluginVersion = '2.8.0'
-        jUnit5PlatformVersion = '1.7.0'
-        jUnit5EngineVersion = '5.7.0'
-        mockitoVersion = '3.6.28'
+        lombokVersion = '1.18.22'
+        javaxValidationVersion = '2.0.1.Final'
+        fasterXmlVersion = "2.12.5"
+
+        springDependencyVersion = '1.0.11.RELEASE'
+        springBootVersion = '2.5.6'
+        springFrameworkVersion = '5.3.12'
+
+        springDocVersion = '1.5.12'
+        swaggerVersion = '2.1.11'
+
+        flywayVersion = '8.0.5'
+        hsqldbVersion = '2.6.1'
+        mysqldbVersion = '8.0.25'
+
+        jibPluginVersion = '3.1.4'
+        jUnit5PlatformVersion = '1.8.1'
+        jUnit5EngineVersion = '5.8.1'
+        mockitoVersion = '4.0.0'
     }
 }
 plugins {

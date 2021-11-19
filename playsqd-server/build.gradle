@@ -1,0 +1,46 @@
+plugins {
+    id 'com.google.cloud.tools.jib' version "${jibPluginVersion}"
+    id 'org.springframework.boot' version "${springBootVersion}"
+}
+
+dependencies {
+    implementation "org.springframework.boot:spring-boot-starter-validation:${springBootVersion}"
+    implementation "org.springframework.boot:spring-boot-starter-actuator:${springBootVersion}"
+    implementation "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
+
+    implementation project(':playsqd-core')
+    implementation project(':playsqd-rest-api')
+    implementation project(':playsqd-integration-spotify')
+}
+
+jar {
+    enabled = true
+}
+
+bootJar {
+    archiveBaseName = 'playsqd-web-app'
+    mainClass = 'com.bemonovoid.playsqd.Application'
+}
+
+jib {
+    allowInsecureRegistries = 'true'
+    from {
+        image = 'openjdk:11-slim'
+        platforms {
+            platform {
+                architecture = 'arm64'
+                os = 'linux'
+            }
+        }
+    }
+    to {
+        image = 'playsqd-app'
+        tags = ['1.0.0']
+    }
+    container {
+        mainClass = 'com.bemonovoid.playsqd.Application'
+        ports = ['9585']
+        creationTime = "USE_CURRENT_TIMESTAMP"
+        environment = [SPRING_CONFIG_LOCATION: "/app/config/application.yaml"]
+    }
+}

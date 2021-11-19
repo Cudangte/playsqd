@@ -1,0 +1,11 @@
+dependencies {
+    implementation "org.springframework:spring-context:${springFrameworkVersion}"
+    implementation "org.springframework:spring-web:${springFrameworkVersion}"
+
+    implementation project (':playsqd-core')
+    implementation project (':playsqd-persistence-jdbc')
+}
+
+jar {
+    enabled = true
+}

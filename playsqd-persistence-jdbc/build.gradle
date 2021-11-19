@@ -1,0 +1,16 @@
+dependencies {
+    runtimeOnly "org.hsqldb:hsqldb:${hsqldbVersion}"
+    runtimeOnly "mysql:mysql-connector-java:${mysqldbVersion}"
+
+    api "org.springframework:spring-jdbc"
+    api "org.springframework.data:spring-data-commons"
+
+    implementation "org.springframework.boot:spring-boot-starter-data-jdbc:${springBootVersion}"
+    implementation "org.flywaydb:flyway-core:${flywayVersion}"
+
+    implementation project (':playsqd-core')
+}
+
+jar {
+    enabled = true
+}
