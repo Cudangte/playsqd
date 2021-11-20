@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 class JTaggerAudioFileReader implements AudioFileReader {
 
     @Override
-    public Optional<AudioFile> readSilently(File file) {
+    public Optional<AudioFile> readGracefully(File file) {
         try {
             return Optional.of(read(file));
         } catch (AudioFileIOException e) {

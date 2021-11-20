@@ -15,10 +15,10 @@ import org.springframework.data.relational.core.mapping.Table;
 @AllArgsConstructor(onConstructor=@__({@PersistenceConstructor}))
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-@Table(MediaDirectoryScanLogEntity.TABLE_NAME)
-public class MediaDirectoryScanLogEntity extends AuditableEntity {
+@Table(MediaSourceScanLogEntity.TABLE_NAME)
+public class MediaSourceScanLogEntity extends AuditableEntity {
 
-    public static final String TABLE_NAME = "MEDIA_DIRECTORY_SCAN_LOG";
+    public static final String TABLE_NAME = "MEDIA_SOURCE_SCAN_LOG";
 
     public static final String COL_ID = "ID";
 

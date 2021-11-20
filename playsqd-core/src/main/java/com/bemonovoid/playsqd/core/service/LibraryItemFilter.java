@@ -9,7 +9,7 @@ public class LibraryItemFilter {
 
     private String id;
     private String name;
-    private PageableRequest pageable;
+    private PageableInfo pageable;
 
     public static LibraryItemFilter withId(String id) {
         return LibraryItemFilter.builder().id(id).build();

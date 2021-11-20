@@ -5,7 +5,7 @@ import java.util.Optional;
 
 public interface AudioFileReader {
 
-    Optional<AudioFile> readSilently(File file);
+    Optional<AudioFile> readGracefully(File file);
 
     /**
      *

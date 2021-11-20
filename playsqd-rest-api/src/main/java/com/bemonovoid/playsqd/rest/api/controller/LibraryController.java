@@ -2,30 +2,30 @@ package com.bemonovoid.playsqd.rest.api.controller;
 
 import com.bemonovoid.playsqd.core.exception.UnsupportedAudioFormatException;
 import com.bemonovoid.playsqd.core.model.Album;
-import com.bemonovoid.playsqd.core.model.ArtistListItem;
+import com.bemonovoid.playsqd.core.model.ArtistInfo;
 import com.bemonovoid.playsqd.core.model.Song;
-import com.bemonovoid.playsqd.core.service.LibraryEditorService;
-import com.bemonovoid.playsqd.core.service.LibraryItemFilter;
-import com.bemonovoid.playsqd.core.service.LibraryQueryService;
-import com.bemonovoid.playsqd.core.service.PageableSearchRequest;
-import com.bemonovoid.playsqd.rest.api.model.DataResponse;
-import com.bemonovoid.playsqd.rest.api.model.PageableResponse;
+import com.bemonovoid.playsqd.core.service.*;
+import com.bemonovoid.playsqd.rest.api.controller.data.response.PageableResponse;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.constraints.Positive;
 import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @RestController
-@RequestMapping("/api/library")
+@RequestMapping(ApiEndpoints.LIBRARY_API_PATH)
 public class LibraryController {
 
     private final LibraryQueryService libraryQueryService;
@@ -37,14 +37,16 @@ public class LibraryController {
     }
 
     @GetMapping("/artists")
-    PageableResponse<ArtistListItem> artists(PageableSearchRequest request) {
-        PageableSearchRequest pageableSearchRequest = request != null ? request : PageableSearchRequest.empty();
+    PageableResponse<ArtistInfo> artists(@Positive @RequestParam(defaultValue = "1") int page,
+                                         @Positive @RequestParam(name = "page_size", defaultValue = "50") int pageSize,
+                                         @RequestParam(required = false) String search) {
+        var pageableSearchRequest = new PageableSearch(search, new PageableInfo(page, pageSize));
         return new PageableResponse<>(libraryQueryService.getArtists(pageableSearchRequest));
     }
 
     @GetMapping("/artists/{artistId}/albums")
-    DataResponse<List<Album>> artistAlbums(@PathVariable String artistId) {
-        return new DataResponse<>(libraryQueryService.getAlbums(LibraryItemFilter.withId(artistId)).getData());
+    PageableResponse<Album> artistAlbums(@PathVariable String artistId) {
+        return new PageableResponse<>(libraryQueryService.getAlbums(LibraryItemFilter.withId(artistId)));
     }
 
     @GetMapping(path = "artists/{artistId}/artwork", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
@@ -56,8 +58,8 @@ public class LibraryController {
     }
 
     @GetMapping("albums/{albumId}/songs")
-    DataResponse<Collection<Song>> artistAlbumSongs(@PathVariable String albumId) {
-        return new DataResponse<>(libraryQueryService.getArtistAlbumSongs(albumId));
+    PageableResponse<Song> artistAlbumSongs(@PathVariable String albumId) {
+        return new PageableResponse<>(libraryQueryService.getArtistAlbumSongs(albumId));
     }
 
     @GetMapping(path = "albums/{albumId}/artwork", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
@@ -69,8 +71,8 @@ public class LibraryController {
     }
 
     @GetMapping("/songs/{songId}")
-    DataResponse<Song> song(@PathVariable long songId) {
-        return new DataResponse<>(libraryQueryService.getSong(songId));
+    Song song(@PathVariable long songId) {
+        return libraryQueryService.getSong(songId);
     }
 
     @PutMapping("/songs/favorite/{songId}")

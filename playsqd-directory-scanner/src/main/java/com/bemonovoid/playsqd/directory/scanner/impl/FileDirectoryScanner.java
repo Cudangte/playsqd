@@ -2,14 +2,14 @@ package com.bemonovoid.playsqd.directory.scanner.impl;
 
 import com.bemonovoid.playsqd.core.audio.AudioFile;
 import com.bemonovoid.playsqd.core.audio.AudioFileReader;
-import com.bemonovoid.playsqd.core.dao.MediaDirectoryDao;
-import com.bemonovoid.playsqd.core.exception.MediaDirectoryAccessException;
 import com.bemonovoid.playsqd.core.dao.MediaDirectoryScanLogDao;
+import com.bemonovoid.playsqd.core.dao.MediaSourceDao;
+import com.bemonovoid.playsqd.core.exception.MediaSourceException;
 import com.bemonovoid.playsqd.core.model.DirectoryScanStatus;
-import com.bemonovoid.playsqd.core.model.MediaDirectory;
+import com.bemonovoid.playsqd.core.model.MediaSource;
 import com.bemonovoid.playsqd.core.model.MusicDirectoryScanLog;
-import com.bemonovoid.playsqd.core.service.MediaDirectoryScanner;
-import com.bemonovoid.playsqd.core.service.ScanOptions;
+import com.bemonovoid.playsqd.core.service.MediaSourceScanner;
+import com.bemonovoid.playsqd.core.service.ScannerOptions;
 import com.bemonovoid.playsqd.persistence.jdbc.entity.LibraryItemEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -28,12 +28,18 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 @Slf4j
 @Component
-class LocalDirectoryScanner implements MediaDirectoryScanner {
+class FileDirectoryScanner implements MediaSourceScanner {
 
     private static final Set<String> SUPPORTED_EXTENSIONS = Set.of("flac", "m4a", "m4p", "mp3", "ogg", "wav", "wma");
 
@@ -41,52 +47,48 @@ class LocalDirectoryScanner implements MediaDirectoryScanner {
     private final Map<String, Map<String, String>> albumIds = Collections.synchronizedMap(new LinkedHashMap<>());
 
     private final JdbcTemplate jdbcTemplate;
-    private final MediaDirectoryDao mediaDirectoryDao;
     private final MediaDirectoryScanLogDao directoryScanLogDao;
     private final AudioFileReader audioFileReader;
 
 
-    LocalDirectoryScanner(JdbcTemplate jdbcTemplate,
-                          MediaDirectoryDao mediaDirectoryDao,
-                          MediaDirectoryScanLogDao directoryScanLogDao,
-                          AudioFileReader audioFileReader) {
+    FileDirectoryScanner(JdbcTemplate jdbcTemplate,
+                         MediaDirectoryScanLogDao directoryScanLogDao,
+                         AudioFileReader audioFileReader) {
         this.jdbcTemplate = jdbcTemplate;
-        this.mediaDirectoryDao = mediaDirectoryDao;
         this.directoryScanLogDao = directoryScanLogDao;
         this.audioFileReader = audioFileReader;
     }
 
     @Override
     @Async
-    public void scan(ScanOptions scanOptions) {
-        prepare(scanOptions);
-        for (long directoryId : scanOptions.directoryIds()) {
-            MediaDirectory mediaDirectory = mediaDirectoryDao.getMediaDirectory(directoryId);
+    public void scan(Collection<MediaSource> mediaSources, ScannerOptions scannerOptions) {
+        prepare(scannerOptions);
+        for (MediaSource mediaSource : mediaSources) {
 
-            Path path = mediaDirectory.getPath();
+//            Path path = Path.of(mediaSource.path());
 
             MusicDirectoryScanLog.MusicDirectoryScanLogBuilder logBuilder = MusicDirectoryScanLog.builder()
-                    .scanDirectory(path.toString())
+                    .scanDirectory(mediaSource.path())
                     .scanStatus(DirectoryScanStatus.IN_PROGRESS)
-                    .deleteMissing(scanOptions.deleteMissing())
-                    .deleteAllBeforeScan(scanOptions.deleteAllBeforeScan());
+                    .deleteMissing(scannerOptions.deleteMissing())
+                    .deleteAllBeforeScan(scannerOptions.deleteAllBeforeScan());
 
             Set<String> indexedFiles = getAlreadyIndexedFiles();
 
             LocalTime scanStartedAt = LocalTime.now();
 
-            SqlParameterSource[] sqlParameterSources = getSqlParametersSourceFromPath(path, indexedFiles);
+            SqlParameterSource[] sqlParameterSources = getSqlParametersSourceFromPath(mediaSource, indexedFiles);
 
             if (sqlParameterSources.length == 0) {
-                log.debug("Directory scanned: {}. Audio files indexed: 0. " +
-                        "Directory might be empty or all the files were indexed already", path);
+                log.debug("Scanned source: {}. No files from the source were indexed. " +
+                        "Source might have bene empty or the source has been indexed already", mediaSource);
             }
 
             try {
                 SimpleJdbcInsert songsJdbcInsert =
                         new SimpleJdbcInsert(jdbcTemplate).withTableName(LibraryItemEntity.TABLE_NAME);
                 int[] rows = songsJdbcInsert.executeBatch(sqlParameterSources);
-                log.info("Directory scanned: {}. Audio files indexed: {}", path, rows.length);
+                log.info("Scanned source: {}. {} files were successfully indexed", mediaSource, rows.length);
 
                 logBuilder.filesScanned(rows.length).scanStatus(DirectoryScanStatus.COMPLETED);
 
@@ -106,7 +108,7 @@ class LocalDirectoryScanner implements MediaDirectoryScanner {
         albumIds.clear();
     }
 
-    private void prepare(ScanOptions options) {
+    private void prepare(ScannerOptions options) {
         if (options.deleteAllBeforeScan()) {
             jdbcTemplate.execute(String.format("TRUNCATE TABLE %s", LibraryItemEntity.TABLE_NAME));
             log.info("Preparing to scan. Library tables truncated.");
@@ -119,22 +121,20 @@ class LocalDirectoryScanner implements MediaDirectoryScanner {
         return Collections.synchronizedSet(new HashSet<>(jdbcTemplate.queryForList(sql, String.class)));
     }
 
-    private SqlParameterSource[] getSqlParametersSourceFromPath(Path path, Set<String> indexedFiles) {
-        try (Stream<Path> subdirectories = Files.walk(path, 100).parallel()) {
+    private SqlParameterSource[] getSqlParametersSourceFromPath(MediaSource mediaSource, Set<String> indexedFiles) {
+        try (Stream<Path> subdirectories = Files.walk(Path.of(mediaSource.path()), 100).parallel()) {
             return subdirectories
                     .map(Path::toFile)
                     .filter(File::isFile)
                     .filter(f -> SUPPORTED_EXTENSIONS.contains(getExtension(f)))
                     .filter(f -> !indexedFiles.remove(f.getAbsolutePath()))
-                    .map(audioFileReader::readSilently)
+                    .map(audioFileReader::readGracefully)
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .map(this::audioFileToSqlParametersSourceMapper)
                     .toArray(SqlParameterSource[]::new);
         } catch (IOException e) {
-            String message =
-                    String.format("Error occurred while scanning audio files from path: '%s'", path.toString());
-            throw new MediaDirectoryAccessException(message, e);
+            throw MediaSourceException.scanException(mediaSource, e);
         }
     }
 

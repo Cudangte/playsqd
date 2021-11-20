@@ -2,14 +2,14 @@ package com.bemonovoid.playsqd.core.service.impl;
 
 import com.bemonovoid.playsqd.core.audio.AudioFile;
 import com.bemonovoid.playsqd.core.audio.AudioFileReader;
-import com.bemonovoid.playsqd.core.dao.MusicLibraryItemDao;
+import com.bemonovoid.playsqd.core.dao.MediaLibraryDao;
 import com.bemonovoid.playsqd.core.model.Album;
-import com.bemonovoid.playsqd.core.model.ArtistListItem;
+import com.bemonovoid.playsqd.core.model.ArtistInfo;
 import com.bemonovoid.playsqd.core.model.Song;
 import com.bemonovoid.playsqd.core.service.LibraryItemFilter;
 import com.bemonovoid.playsqd.core.service.LibraryQueryService;
 import com.bemonovoid.playsqd.core.service.PageableResult;
-import com.bemonovoid.playsqd.core.service.PageableSearchRequest;
+import com.bemonovoid.playsqd.core.service.PageableSearch;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Paths;
@@ -19,45 +19,45 @@ import java.util.Optional;
 @Service
 class LibraryQueryServiceImpl implements LibraryQueryService {
 
-    private final MusicLibraryItemDao musicLibraryItemDao;
+    private final MediaLibraryDao mediaLibraryDao;
     private final AudioFileReader audioFileReader;
 
-    LibraryQueryServiceImpl(MusicLibraryItemDao musicLibraryItemDao,
+    LibraryQueryServiceImpl(MediaLibraryDao mediaLibraryDao,
                             AudioFileReader audioFileReader) {
-        this.musicLibraryItemDao = musicLibraryItemDao;
+        this.mediaLibraryDao = mediaLibraryDao;
         this.audioFileReader = audioFileReader;
     }
 
     @Override
-    public PageableResult<ArtistListItem> getArtists(PageableSearchRequest pageableSearchRequest) {
-        return musicLibraryItemDao.getArtists(pageableSearchRequest);
+    public PageableResult<ArtistInfo> getArtists(PageableSearch pageableSearch) {
+        return mediaLibraryDao.getArtists(pageableSearch);
     }
 
     @Override
     public PageableResult<Album> getAlbums(LibraryItemFilter libraryItemFilter) {
-        return musicLibraryItemDao.getAlbums(libraryItemFilter);
+        return mediaLibraryDao.getAlbums(libraryItemFilter);
     }
 
     @Override
-    public Collection<Song> getArtistAlbumSongs(String albumId) {
-        return musicLibraryItemDao.getArtistAlbumSongs(albumId);
+    public PageableResult<Song> getArtistAlbumSongs(String albumId) {
+        return mediaLibraryDao.getArtistAlbumSongs(albumId);
     }
 
     @Override
     public Song getSong(long songId) {
-        return musicLibraryItemDao.getSong(songId);
+        return mediaLibraryDao.getSong(songId);
     }
 
     @Override
     public Optional<byte[]> getSongArtwork(long songId) {
-        String songLocation = musicLibraryItemDao.getSongLocation(songId);
+        String songLocation = mediaLibraryDao.getSongLocation(songId);
         AudioFile audioFile = audioFileReader.read(Paths.get(songLocation).toFile());
         return audioFile.getArtwork();
     }
 
     @Override
     public Optional<byte[]> getAlbumArtwork(String albumId) {
-        String songLocation = musicLibraryItemDao.getFirstAlbumSongLocation(albumId);
+        String songLocation = mediaLibraryDao.getFirstAlbumSongLocation(albumId);
         AudioFile audioFile = audioFileReader.read(Paths.get(songLocation).toFile());
         return audioFile.getArtwork();
     }

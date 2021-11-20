@@ -1,6 +1,6 @@
 package com.bemonovoid.playsqd.rest.api.model;
 
-import com.bemonovoid.playsqd.core.model.MusicDirectoryType;
+import com.bemonovoid.playsqd.core.model.SourceType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,12 +13,12 @@ import javax.validation.constraints.NotNull;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class MusicDirectoryJsonModel {
+public class MusicSource {
 
     private long id;
 
     @NotNull
-    private MusicDirectoryType type;
+    private SourceType type;
 
     @NotNull
     private String path;

@@ -1,14 +1,14 @@
 package com.bemonovoid.playsqd.persistence.jdbc.dao;
 
-import com.bemonovoid.playsqd.core.dao.MusicLibraryItemDao;
+import com.bemonovoid.playsqd.core.dao.MediaLibraryDao;
 import com.bemonovoid.playsqd.core.exception.DatabaseItemNotFoundException;
 import com.bemonovoid.playsqd.core.model.Album;
 import com.bemonovoid.playsqd.core.model.Artist;
-import com.bemonovoid.playsqd.core.model.ArtistListItem;
+import com.bemonovoid.playsqd.core.model.ArtistInfo;
 import com.bemonovoid.playsqd.core.model.Song;
 import com.bemonovoid.playsqd.core.service.LibraryItemFilter;
 import com.bemonovoid.playsqd.core.service.PageableResult;
-import com.bemonovoid.playsqd.core.service.PageableSearchRequest;
+import com.bemonovoid.playsqd.core.service.PageableSearch;
 import com.bemonovoid.playsqd.persistence.jdbc.entity.LibraryItemEntity;
 import com.bemonovoid.playsqd.persistence.jdbc.repository.LibraryItemRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -18,48 +18,41 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-class MusicLibraryItemDaoImpl implements MusicLibraryItemDao {
+class MediaLibraryDaoImpl implements MediaLibraryDao {
 
     private final JdbcTemplate jdbcTemplate;
     private final LibraryItemRepository repository;
 
-    MusicLibraryItemDaoImpl(JdbcTemplate jdbcTemplate, LibraryItemRepository repository) {
+    MediaLibraryDaoImpl(JdbcTemplate jdbcTemplate, LibraryItemRepository repository) {
         this.jdbcTemplate = jdbcTemplate;
         this.repository = repository;
     }
 
     @Override
-    public PageableResult<ArtistListItem> getArtists(PageableSearchRequest pageableSearchRequest) {
-        long total = getTotalArtistCount(pageableSearchRequest);
-
+    public PageableResult<ArtistInfo> getArtists(PageableSearch pageableSearch) {
+        long total = getTotalArtistCount(pageableSearch);
         if (total == 0) {
             return PageableResultImpl.empty();
         }
+        List<ArtistInfo> artistInfos;
 
-        PageRequest pageRequest = PageRequest.of(pageableSearchRequest.getPage(), pageableSearchRequest.getPageSize());
+        PageRequest pageRequest =
+                PageRequest.of(pageableSearch.pageInfo().page() - 1, pageableSearch.pageInfo().pageSize());
 
-        String pageableSql = " GROUP BY " + LibraryItemEntity.COL_ARTIST_ID + "," + LibraryItemEntity.COL_ARTIST_NAME +
-                " LIMIT " + pageRequest.getPageSize() + " OFFSET " + pageRequest.getOffset();
-
-        String sql = "SELECT " + LibraryItemEntity.COL_ARTIST_ID + "," + LibraryItemEntity.COL_ARTIST_NAME +
-                ",COUNT(DISTINCT " + LibraryItemEntity.COL_ALBUM_ID + "),COUNT(" + LibraryItemEntity.COL_ID + ")" +
-                " FROM " + LibraryItemEntity.TABLE_NAME;
-
-        if (StringUtils.hasText(pageableSearchRequest.getSearch())) {
-            String likeInput = pageableSearchRequest.getSearch().toUpperCase();
-            sql += " WHERE UPPER(" + LibraryItemEntity.COL_ARTIST_NAME + ") LIKE '%" + likeInput + "%'";
+        if (StringUtils.hasText(pageableSearch.search())) {
+            artistInfos = repository.pageableArtistsLike(
+                    pageRequest.getPageSize(), pageRequest.getOffset(), pageableSearch.search().toUpperCase());
+        } else {
+            artistInfos = repository.pageableArtists(pageRequest.getPageSize(), pageRequest.getOffset());
         }
-
-        sql += pageableSql;
-
-        List<ArtistListItem> artists = jdbcTemplate.query(sql,
-                (rs, rowNum) -> new ArtistListItem(rs.getString(1), rs.getString(2), rs.getInt(3), rs.getInt(4)));
-        return new PageableResultImpl<>(new PageImpl<>(artists, pageRequest, total));
+        return new PageableResultImpl<>(new PageImpl<>(artistInfos, pageRequest, total));
     }
 
     @Override
@@ -100,7 +93,7 @@ class MusicLibraryItemDaoImpl implements MusicLibraryItemDao {
     }
 
     @Override
-    public Collection<Song> getArtistAlbumSongs(String albumId) {
+    public PageableResult<Song> getArtistAlbumSongs(String albumId) {
         Artist artist = null;
         Album album = null;
 
@@ -127,7 +120,7 @@ class MusicLibraryItemDaoImpl implements MusicLibraryItemDao {
             }
             songs.add(songFromEntity(entity).artist(artist).album(album).build());
         }
-        return songs;
+        return new PageableResultImpl<>(new PageImpl<>(songs));
     }
 
     @Override
@@ -145,13 +138,8 @@ class MusicLibraryItemDaoImpl implements MusicLibraryItemDao {
 
     @Override
     public String getFirstAlbumSongLocation(String albumId) {
-        String sql = "SELECT " + LibraryItemEntity.COL_FILE_LOCATION + " FROM " + LibraryItemEntity.TABLE_NAME +
-                " WHERE " + LibraryItemEntity.COL_ALBUM_ID + " = ? LIMIT 1" ;
-        List<String> result = jdbcTemplate.queryForList(sql, String.class, albumId);
-        if (result.isEmpty()) {
-            throw new DatabaseItemNotFoundException("Album", String.valueOf(albumId));
-        }
-        return result.get(0);
+        return repository.findAlbumSongLocation(albumId)
+                .orElseThrow(() -> new DatabaseItemNotFoundException("Album", String.valueOf(albumId)));
     }
 
     @Override
@@ -172,13 +160,12 @@ class MusicLibraryItemDaoImpl implements MusicLibraryItemDao {
                 .orElseThrow(() -> new DatabaseItemNotFoundException("Song", String.valueOf(songId)));
     }
 
-    private long getTotalArtistCount(PageableSearchRequest request) {
-        String totalSql = "SELECT COUNT(DISTINCT " + LibraryItemEntity.COL_ARTIST_ID + ") FROM " + LibraryItemEntity.TABLE_NAME;
-        if (StringUtils.hasText(request.getSearch())) {
-            String likeInput = request.getSearch().toUpperCase();
-            totalSql += " WHERE UPPER(" + LibraryItemEntity.COL_ARTIST_NAME + ") LIKE '%" + likeInput + "%'";
+    private long getTotalArtistCount(PageableSearch request) {
+        if (StringUtils.hasText(request.search())) {
+            return repository.artistsLikeCount(request.search());
+        } else {
+            return repository.artistsCount();
         }
-        return Optional.ofNullable(jdbcTemplate.queryForObject(totalSql, Long.class)).orElse(0L);
     }
 
     private Artist artistFromEntity(LibraryItemEntity entity) {

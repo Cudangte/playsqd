@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @AllArgsConstructor
 @Getter
-public enum MusicDirectoryType {
+public enum SourceType {
 
     LOCAL("local");
 
