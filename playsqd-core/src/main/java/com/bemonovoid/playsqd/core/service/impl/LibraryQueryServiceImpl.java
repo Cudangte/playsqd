@@ -3,17 +3,16 @@ package com.bemonovoid.playsqd.core.service.impl;
 import com.bemonovoid.playsqd.core.audio.AudioFile;
 import com.bemonovoid.playsqd.core.audio.AudioFileReader;
 import com.bemonovoid.playsqd.core.dao.MediaLibraryDao;
-import com.bemonovoid.playsqd.core.model.Album;
+import com.bemonovoid.playsqd.core.model.AlbumInfo;
 import com.bemonovoid.playsqd.core.model.ArtistInfo;
 import com.bemonovoid.playsqd.core.model.Song;
-import com.bemonovoid.playsqd.core.service.LibraryItemFilter;
+import com.bemonovoid.playsqd.core.service.AlbumSearchCriteria;
+import com.bemonovoid.playsqd.core.service.ArtistSearchCriteria;
 import com.bemonovoid.playsqd.core.service.LibraryQueryService;
 import com.bemonovoid.playsqd.core.service.PageableResult;
-import com.bemonovoid.playsqd.core.service.PageableSearch;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Paths;
-import java.util.Collection;
 import java.util.Optional;
 
 @Service
@@ -29,13 +28,13 @@ class LibraryQueryServiceImpl implements LibraryQueryService {
     }
 
     @Override
-    public PageableResult<ArtistInfo> getArtists(PageableSearch pageableSearch) {
-        return mediaLibraryDao.getArtists(pageableSearch);
+    public PageableResult<ArtistInfo> getArtists(ArtistSearchCriteria searchCriteria) {
+        return mediaLibraryDao.getArtists(searchCriteria);
     }
 
     @Override
-    public PageableResult<Album> getAlbums(LibraryItemFilter libraryItemFilter) {
-        return mediaLibraryDao.getAlbums(libraryItemFilter);
+    public PageableResult<AlbumInfo> getAlbums(AlbumSearchCriteria searchCriteria) {
+        return mediaLibraryDao.getAlbums(searchCriteria);
     }
 
     @Override

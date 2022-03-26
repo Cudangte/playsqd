@@ -1,17 +1,16 @@
 package com.bemonovoid.playsqd.core.service;
 
-import com.bemonovoid.playsqd.core.model.Album;
+import com.bemonovoid.playsqd.core.model.AlbumInfo;
 import com.bemonovoid.playsqd.core.model.ArtistInfo;
 import com.bemonovoid.playsqd.core.model.Song;
 
-import java.util.Collection;
 import java.util.Optional;
 
 public interface LibraryQueryService {
 
-    PageableResult<ArtistInfo> getArtists(PageableSearch pageableSearch);
+    PageableResult<ArtistInfo> getArtists(ArtistSearchCriteria searchCriteria);
 
-    PageableResult<Album> getAlbums(LibraryItemFilter libraryItemFilter);
+    PageableResult<AlbumInfo> getAlbums(AlbumSearchCriteria searchCriteria);
 
     PageableResult<Song> getArtistAlbumSongs(String albumId);
 

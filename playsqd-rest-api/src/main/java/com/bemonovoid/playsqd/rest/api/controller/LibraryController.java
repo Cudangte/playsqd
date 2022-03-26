@@ -1,17 +1,18 @@
 package com.bemonovoid.playsqd.rest.api.controller;
 
-import com.bemonovoid.playsqd.core.exception.UnsupportedAudioFormatException;
-import com.bemonovoid.playsqd.core.model.Album;
+import com.bemonovoid.playsqd.core.model.AlbumInfo;
 import com.bemonovoid.playsqd.core.model.ArtistInfo;
 import com.bemonovoid.playsqd.core.model.Song;
-import com.bemonovoid.playsqd.core.service.*;
+import com.bemonovoid.playsqd.core.service.AlbumSearchCriteria;
+import com.bemonovoid.playsqd.core.service.ArtistSearchCriteria;
+import com.bemonovoid.playsqd.core.service.LibraryEditorService;
+import com.bemonovoid.playsqd.core.service.LibraryQueryService;
+import com.bemonovoid.playsqd.core.service.PageableInfo;
 import com.bemonovoid.playsqd.rest.api.controller.data.response.PageableResponse;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -20,10 +21,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.constraints.Positive;
-import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+@Validated
 @RestController
 @RequestMapping(ApiEndpoints.LIBRARY_API_PATH)
 public class LibraryController {
@@ -39,14 +40,23 @@ public class LibraryController {
     @GetMapping("/artists")
     PageableResponse<ArtistInfo> artists(@Positive @RequestParam(defaultValue = "1") int page,
                                          @Positive @RequestParam(name = "page_size", defaultValue = "50") int pageSize,
-                                         @RequestParam(required = false) String search) {
-        var pageableSearchRequest = new PageableSearch(search, new PageableInfo(page, pageSize));
-        return new PageableResponse<>(libraryQueryService.getArtists(pageableSearchRequest));
+                                         @RequestParam(name = "artist_name_like", required = false) String artistNameLike) {
+        var searchCriteria = new ArtistSearchCriteria(artistNameLike, new PageableInfo(page, pageSize));
+        return new PageableResponse<>(libraryQueryService.getArtists(searchCriteria));
+    }
+
+    @GetMapping("/albums")
+    PageableResponse<AlbumInfo> albums(@Positive @RequestParam(defaultValue = "1") int page,
+                                       @Positive @RequestParam(name = "page_size", defaultValue = "50") int pageSize,
+                                       @RequestParam(required = false) String name) {
+        PageableInfo pageableInfo = new PageableInfo(page, pageSize);
+        AlbumSearchCriteria searchCriteria = AlbumSearchCriteria.pageableByName(name, pageableInfo);
+        return new PageableResponse<>(libraryQueryService.getAlbums(searchCriteria));
     }
 
     @GetMapping("/artists/{artistId}/albums")
-    PageableResponse<Album> artistAlbums(@PathVariable String artistId) {
-        return new PageableResponse<>(libraryQueryService.getAlbums(LibraryItemFilter.withId(artistId)));
+    PageableResponse<AlbumInfo> artistAlbums(@PathVariable String artistId) {
+        return new PageableResponse<>(libraryQueryService.getAlbums(AlbumSearchCriteria.forArtistId(artistId)));
     }
 
     @GetMapping(path = "artists/{artistId}/artwork", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
@@ -62,8 +72,9 @@ public class LibraryController {
         return new PageableResponse<>(libraryQueryService.getArtistAlbumSongs(albumId));
     }
 
-    @GetMapping(path = "albums/{albumId}/artwork", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
+    @GetMapping(path = "/albums/{albumId}/artwork", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
     ResponseEntity<byte[]> albumArtwork(@PathVariable String albumId) {
+//        String artistId = FileUtils.fileNameWithoutExtension(artworkId);
         Optional<byte[]> albumArtworkOpt = libraryQueryService.getAlbumArtwork(albumId);
         return albumArtworkOpt
                 .map(artwork -> ResponseEntity.ok().cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS)).body(artwork))
@@ -80,33 +91,4 @@ public class LibraryController {
         libraryEditorService.updateFavoriteStatus(songId);
     }
 
-    @GetMapping(path = "songs/{songId}/artwork", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
-    ResponseEntity<byte[]> albumArtwork(@PathVariable long songId) {
-        Optional<byte[]> albumArtworkOpt = libraryQueryService.getSongArtwork(songId);
-        return albumArtworkOpt
-                .map(artwork -> ResponseEntity.ok().cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS)).body(artwork))
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    /**
-     * // See: Spring's AbstractMessageConverterMethodProcessor implementation that handles byte ranges
-     * @param songId
-     * @return Audio file stream at the given byte range.
-     */
-    @GetMapping("/songs/{songId}/stream")
-    ResponseEntity<Resource> audioStream(@PathVariable long songId) {
-
-        String fileLocation = libraryQueryService.getSong(songId).getFileLocation();
-        String fileType = fileLocation.substring(fileLocation.lastIndexOf(".") + 1);
-        if ("mp3".equalsIgnoreCase(fileType)) {
-            fileType = "mpeg";
-        } else if ("wma".equalsIgnoreCase(fileType)) {
-            throw new UnsupportedAudioFormatException("'wma' audio format is not supported");
-        } else if ("oga".equalsIgnoreCase(fileType)) {
-            fileType = "ogg";
-        }
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, "audio/" + fileType)
-                .body(new FileSystemResource(Paths.get(fileLocation)));
-    }
 }

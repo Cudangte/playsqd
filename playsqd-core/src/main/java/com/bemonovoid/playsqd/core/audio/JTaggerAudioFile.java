@@ -1,7 +1,6 @@
 package com.bemonovoid.playsqd.core.audio;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import com.bemonovoid.playsqd.core.utils.FileUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.Tag;
@@ -10,14 +9,10 @@ import org.springframework.util.StringUtils;
 import java.util.Optional;
 
 @Slf4j
-@Getter
-@AllArgsConstructor
-public class JTaggerAudioFile implements AudioFile {
+record JTaggerAudioFile(org.jaudiotagger.audio.AudioFile jTaggerAudioFile) implements AudioFile {
 
     private static final String UNKNOWN_ARTIST = "Unknown artist";
     private static final String UNKNOWN_ALBUM = "Unknown album";
-
-    private final org.jaudiotagger.audio.AudioFile jTaggerAudioFile;
 
     @Override
     public String getArtistName() {
@@ -53,7 +48,7 @@ public class JTaggerAudioFile implements AudioFile {
     }
 
     @Override
-    public String getSongName() {
+    public String getTrackName() {
         String songName = readFromTag(FieldKey.TITLE);
         if (!StringUtils.hasText(songName)) {
             songName = getFileName();
@@ -62,12 +57,12 @@ public class JTaggerAudioFile implements AudioFile {
     }
 
     @Override
-    public String getGenre() {
+    public String getAlbumGenre() {
         return readFromTag(FieldKey.GENRE);
     }
 
     @Override
-    public String getYear() {
+    public String getAlbumYear() {
         return readFromTag(FieldKey.YEAR);
     }
 
@@ -97,7 +92,7 @@ public class JTaggerAudioFile implements AudioFile {
     @Override
     public String getFileName() {
         String fileName = jTaggerAudioFile.getFile().getName();
-        return fileName.substring(0, fileName.lastIndexOf("."));
+        return FileUtils.fileNameWithoutExtension(fileName);
     }
 
     @Override

@@ -4,6 +4,12 @@ spring:
     username: bemonovoid
     password: bemonovoidpwd
     type: org.hsqldb.jdbc.JDBCPool
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        dialect: "org.hibernate.dialect.HSQLDialect"
 
 playsqd:
   library:

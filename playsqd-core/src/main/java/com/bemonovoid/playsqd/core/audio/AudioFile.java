@@ -10,17 +10,19 @@ public interface AudioFile {
 
     String getAlbumName();
 
-    String getSongName();
+    String getAlbumGenre();
 
-    String getGenre();
+    String getAlbumYear();
 
-    String getYear();
+    int getTrackId();
+
+    String getTrackName();
+
+    int getTrackLength();
 
     String getComment();
 
     String getLyrics();
-
-    int getTrackId();
 
     String getFileName();
 
@@ -35,8 +37,6 @@ public interface AudioFile {
     String getBitRate();
 
     String getChannels();
-
-    int getTrackLength();
 
     Optional<byte[]> getArtwork();
 

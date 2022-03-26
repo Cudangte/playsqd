@@ -31,11 +31,11 @@ public class LibraryItemEntity extends AuditableEntity {
     public static final String COL_ALBUM_YEAR = "ALBUM_YEAR";
     public static final String COL_ALBUM_GENRE = "ALBUM_GENRE";
 
-    public static final String COL_SONG_NAME = "SONG_NAME";
-    public static final String COL_SONG_TRACK_ID = "SONG_TRACK_ID";
-    public static final String COL_SONG_TRACK_LENGTH = "SONG_TRACK_LENGTH";
-    public static final String COL_SONG_COMMENT = "SONG_COMMENT";
-    public static final String COL_SONG_LYRICS = "SONG_LYRICS";
+    public static final String COL_TRACK_NAME = "TRACK_NAME";
+    public static final String COL_TRACK_ID = "TRACK_ID";
+    public static final String COL_TRACK_LENGTH = "TRACK_LENGTH";
+    public static final String COL_TRACK_COMMENT = "TRACK_COMMENT";
+    public static final String COL_TRACK_LYRICS = "TRACK_LYRICS";
 
     public static final String COL_AUDIO_BIT_RATE = "AUDIO_BIT_RATE";
     public static final String COL_AUDIO_CHANNEL_TYPE = "AUDIO_CHANNEL_TYPE";
@@ -80,20 +80,20 @@ public class LibraryItemEntity extends AuditableEntity {
     @Column(COL_ALBUM_GENRE)
     private String albumGenre;
 
-    @Column(COL_SONG_NAME)
-    private String songName;
+    @Column(COL_TRACK_NAME)
+    private String trackName;
 
-    @Column(COL_SONG_TRACK_ID)
-    private int songTrackId;
+    @Column(COL_TRACK_ID)
+    private int trackId;
 
-    @Column(COL_SONG_TRACK_LENGTH)
-    private int songTrackLength;
+    @Column(COL_TRACK_LENGTH)
+    private int trackLength;
 
-    @Column(COL_SONG_COMMENT)
-    private String songComment;
+    @Column(COL_TRACK_COMMENT)
+    private String comment;
 
-    @Column(COL_SONG_LYRICS)
-    private String songLyrics;
+    @Column(COL_TRACK_LYRICS)
+    private String lyrics;
 
     @Column(COL_AUDIO_BIT_RATE)
     private String audioBitRate;

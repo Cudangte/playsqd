@@ -1,27 +1,34 @@
 package com.bemonovoid.playsqd.persistence.jdbc.dao;
 
 import com.bemonovoid.playsqd.core.dao.MediaLibraryDao;
-import com.bemonovoid.playsqd.core.exception.DatabaseItemNotFoundException;
+import com.bemonovoid.playsqd.core.exception.PlayqdException;
 import com.bemonovoid.playsqd.core.model.Album;
+import com.bemonovoid.playsqd.core.model.AlbumInfo;
 import com.bemonovoid.playsqd.core.model.Artist;
 import com.bemonovoid.playsqd.core.model.ArtistInfo;
+import com.bemonovoid.playsqd.core.model.ScannableItemInfo;
 import com.bemonovoid.playsqd.core.model.Song;
-import com.bemonovoid.playsqd.core.service.LibraryItemFilter;
+import com.bemonovoid.playsqd.core.service.AlbumSearchCriteria;
+import com.bemonovoid.playsqd.core.service.ArtistSearchCriteria;
 import com.bemonovoid.playsqd.core.service.PageableResult;
-import com.bemonovoid.playsqd.core.service.PageableSearch;
 import com.bemonovoid.playsqd.persistence.jdbc.entity.LibraryItemEntity;
 import com.bemonovoid.playsqd.persistence.jdbc.repository.LibraryItemRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
+import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Component
@@ -36,60 +43,56 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
     }
 
     @Override
-    public PageableResult<ArtistInfo> getArtists(PageableSearch pageableSearch) {
-        long total = getTotalArtistCount(pageableSearch);
+    public PageableResult<ArtistInfo> getArtists(ArtistSearchCriteria searchCriteria) {
+        long total = getTotalArtistCount(searchCriteria);
         if (total == 0) {
             return PageableResultImpl.empty();
         }
         List<ArtistInfo> artistInfos;
 
-        PageRequest pageRequest =
-                PageRequest.of(pageableSearch.pageInfo().page() - 1, pageableSearch.pageInfo().pageSize());
+        int page = searchCriteria.pageableInfo().page();
+        int pageSize = searchCriteria.pageableInfo().pageSize();
+        long offset = (page - 1L) * pageSize;
 
-        if (StringUtils.hasText(pageableSearch.search())) {
-            artistInfos = repository.pageableArtistsLike(
-                    pageRequest.getPageSize(), pageRequest.getOffset(), pageableSearch.search().toUpperCase());
+        if (StringUtils.hasText(searchCriteria.artistNameLike())) {
+            artistInfos =
+                    repository.pageableArtistsLike(pageSize, offset, searchCriteria.artistNameLike().toUpperCase());
         } else {
-            artistInfos = repository.pageableArtists(pageRequest.getPageSize(), pageRequest.getOffset());
+            artistInfos = repository.pageableArtists(pageSize, offset);
         }
+
+        PageRequest pageRequest = PageRequest.of(page - 1, searchCriteria.pageableInfo().pageSize());
+
         return new PageableResultImpl<>(new PageImpl<>(artistInfos, pageRequest, total));
     }
 
     @Override
-    public PageableResult<Album> getAlbums(LibraryItemFilter libraryItemFilter) {
-        if (libraryItemFilter.getId() != null) {
-            String artistId = libraryItemFilter.getId();
-            Map<String, List<LibraryItemEntity>> itemsByAlbumId = repository.findByArtistId(artistId)
-                    .collect(Collectors.groupingBy(LibraryItemEntity::getAlbumId));
-
-            if (itemsByAlbumId.isEmpty()) {
-                throw new DatabaseItemNotFoundException("Artist", artistId);
+    public PageableResult<AlbumInfo> getAlbums(AlbumSearchCriteria searchCriteria) {
+        if (searchCriteria.artistId() != null) {
+            List<AlbumInfo> artistAlbums = repository.artistAlbums(searchCriteria.artistId());
+            return new PageableResultImpl<>(new PageImpl<>(artistAlbums));
+        } else {
+            long albumsCount;
+            String albumNameLike = searchCriteria.albumName() == null ? "" : searchCriteria.albumName();
+            if (albumNameLike.isBlank()) {
+                albumsCount = repository.albumsCount();
+            } else {
+                albumsCount = repository.albumsLikeCount(albumNameLike.toUpperCase());
+            }
+            if (albumsCount == 0) {
+                return PageableResultImpl.empty();
             }
 
-            Artist artist = null;
+            int page = searchCriteria.pageableInfo().page();
+            int pageSize = searchCriteria.pageableInfo().pageSize();
+            long offset = (page - 1L) * pageSize;
 
-            List<Album> albums = new ArrayList<>(itemsByAlbumId.size());
+            List<AlbumInfo> albumInfos = repository.pageableAlbumsLike(pageSize, offset, albumNameLike.toUpperCase());
 
-            for (Map.Entry<String, List<LibraryItemEntity>> entry : itemsByAlbumId.entrySet()) {
+            PageRequest pageRequest = PageRequest.of(page - 1, searchCriteria.pageableInfo().pageSize());
 
-                LibraryItemEntity itemEntity = entry.getValue().get(0);
-
-                if (artist == null) {
-                    artist = artistFromEntity(itemEntity);
-                }
-
-                int albumTimeInSeconds =
-                        entry.getValue().stream().mapToInt(LibraryItemEntity::getSongTrackLength).sum();
-
-                albums.add(albumFromEntity(itemEntity)
-                        .artist(artist)
-                        .totalSongs(entry.getValue().size())
-                        .totalTimeInSeconds(albumTimeInSeconds)
-                        .build());
-            }
-            return new PageableResultImpl<>(new PageImpl<>(albums));
+            return new PageableResultImpl<>(new PageImpl<>(albumInfos, pageRequest, albumsCount));
         }
-        return PageableResultImpl.empty();
     }
 
     @Override
@@ -100,7 +103,7 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
         List<LibraryItemEntity> albumItems = repository.findByAlbumId(albumId);
 
         if (albumItems.isEmpty()) {
-            throw new DatabaseItemNotFoundException("Album", albumId);
+            throw PlayqdException.objectDoesNotExistException("Album", albumId);
         }
 
         List<Song> songs = new ArrayList<>(albumItems.size());
@@ -111,7 +114,7 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
             }
             if (album == null) {
                 int albumTimeInSeconds =
-                        albumItems.stream().mapToInt(LibraryItemEntity::getSongTrackLength).sum();
+                        albumItems.stream().mapToInt(LibraryItemEntity::getTrackLength).sum();
                 album = albumFromEntity(entity)
                         .artist(artist)
                         .totalSongs(albumItems.size())
@@ -122,6 +125,7 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
         }
         return new PageableResultImpl<>(new PageImpl<>(songs));
     }
+
 
     @Override
     public Song getSong(long songId) {
@@ -139,13 +143,42 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
     @Override
     public String getFirstAlbumSongLocation(String albumId) {
         return repository.findAlbumSongLocation(albumId)
-                .orElseThrow(() -> new DatabaseItemNotFoundException("Album", String.valueOf(albumId)));
+                .orElseThrow(() -> PlayqdException.objectDoesNotExistException("Album", String.valueOf(albumId)));
     }
 
     @Override
     public void updateFavoriteStatus(long songId) {
         Song song = getSong(songId);
         updateSong(songId, List.of(LibraryItemEntity.COL_MISC_IS_FAVORITE), !song.isFavorite());
+    }
+
+    @Override
+    public Set<String> getAllLocations() {
+        return Collections.synchronizedSet(new HashSet<>(jdbcTemplate.queryForList(
+                String.format("SELECT %s FROM %s", LibraryItemEntity.COL_FILE_LOCATION, LibraryItemEntity.TABLE_NAME),
+                String.class)));
+    }
+
+    @Override
+    public void deleteAllByLocation(String location) {
+        repository.deleteAllByFileLocationStartsWith(location);
+    }
+
+    @Override
+    public int addLibraryItems(Stream<ScannableItemInfo> itemsStream) {
+        int itemsScannedCount = 0;
+
+        SqlParameterSource[] sqlParameterSources = itemsStream
+                .map(DataMappers::audioFileToSqlParametersSource)
+                .toArray(SqlParameterSource[]::new);
+
+        if (sqlParameterSources.length == 0) {
+            return itemsScannedCount;
+        }
+
+        SimpleJdbcInsert songsJdbcInsert = new SimpleJdbcInsert(jdbcTemplate).withTableName(LibraryItemEntity.TABLE_NAME);
+        int[] rows = songsJdbcInsert.executeBatch(sqlParameterSources);
+        return rows.length;
     }
 
     private void updateSong(long songId, List<String> columns, Object... args) {
@@ -157,12 +190,12 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
 
     private LibraryItemEntity getLibraryItemEntityById(long songId) {
         return repository.findById(songId)
-                .orElseThrow(() -> new DatabaseItemNotFoundException("Song", String.valueOf(songId)));
+                .orElseThrow(() -> PlayqdException.objectDoesNotExistException("Song", String.valueOf(songId)));
     }
 
-    private long getTotalArtistCount(PageableSearch request) {
-        if (StringUtils.hasText(request.search())) {
-            return repository.artistsLikeCount(request.search());
+    private long getTotalArtistCount(ArtistSearchCriteria searchCriteria) {
+        if (StringUtils.hasText(searchCriteria.artistNameLike())) {
+            return repository.artistsLikeCount(searchCriteria.artistNameLike());
         } else {
             return repository.artistsCount();
         }
@@ -183,11 +216,11 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
     private Song.SongBuilder songFromEntity(LibraryItemEntity entity) {
         return Song.builder()
                 .id(entity.getId())
-                .name(entity.getSongName())
-                .comment(entity.getSongComment())
-                .lyrics(entity.getSongLyrics())
-                .trackId(entity.getSongTrackId())
-                .trackLengthInSeconds(entity.getSongTrackLength())
+                .name(entity.getTrackName())
+                .comment(entity.getComment())
+                .lyrics(entity.getLyrics())
+                .trackId(entity.getTrackId())
+                .trackLengthInSeconds(entity.getTrackLength())
                 .audioBitRate(entity.getAudioBitRate())
                 .audioChannelType(entity.getAudioChannelType())
                 .audioEncodingType(entity.getAudioEncodingType())

@@ -1,5 +1,6 @@
 package com.bemonovoid.playsqd.persistence.jdbc.repository;
 
+import com.bemonovoid.playsqd.core.model.AlbumInfo;
 import com.bemonovoid.playsqd.core.model.ArtistInfo;
 import com.bemonovoid.playsqd.persistence.jdbc.entity.LibraryItemEntity;
 import org.springframework.data.repository.CrudRepository;
@@ -21,11 +22,23 @@ public interface LibraryItemRepository extends CrudRepository<LibraryItemEntity,
 
     long artistsLikeCount(@Param("artistNameLike") String artistNameLike);
 
+    long albumsCount();
+
+    long albumsLikeCount(@Param("albumNameLike") String albumNameLike);
+
     List<ArtistInfo> pageableArtists(@Param("pageSize") int pageSize, @Param("offset") long offset);
 
     List<ArtistInfo> pageableArtistsLike(@Param("pageSize") int pageSize,
                                          @Param("offset") long offset,
                                          @Param("artistNameLike") String artistNameLike);
+
+    List<AlbumInfo> artistAlbums(@Param("artistId") String artistId);
+
+    List<AlbumInfo> pageableAlbumsLike(@Param("pageSize") int pageSize,
+                                       @Param("offset") long offset,
+                                       @Param("albumNameLike") String artistNameLike);
+
+    void deleteAllByFileLocationStartsWith(String location);
 
 
 }

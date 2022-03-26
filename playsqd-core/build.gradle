@@ -2,17 +2,18 @@ jar {
     enabled = true
 }
 
-repositories {
-    flatDir {
-        dirs 'libs'
-    }
-}
+//repositories {
+//    flatDir {
+//        dirs 'libs'
+//    }
+//}
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
-
+//    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "net.jthink:jaudiotagger:${jaudiotaggerVersion}"
     implementation "javax.validation:validation-api:${javaxValidationVersion}"
     implementation "com.fasterxml.jackson.core:jackson-annotations:${fasterXmlVersion}"
     implementation "org.springframework:spring-context:${springFrameworkVersion}"
+    implementation "org.apache.commons:commons-lang3"
 }
 

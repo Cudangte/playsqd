@@ -2,7 +2,6 @@ rootProject.name= 'playsqd'
 
 include 'playsqd-core'
 include 'playsqd-persistence-jdbc'
-include 'playsqd-directory-scanner'
 include 'playsqd-rest-api'
 include 'playsqd-integration-spotify'
 include 'playsqd-server'

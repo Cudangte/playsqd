@@ -17,4 +17,5 @@ class LibraryEditorServiceImpl implements LibraryEditorService {
     public void updateFavoriteStatus(long songId) {
         mediaLibraryDao.updateFavoriteStatus(songId);
     }
+
 }
