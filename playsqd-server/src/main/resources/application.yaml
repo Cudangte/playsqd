@@ -5,7 +5,7 @@ server:
 
 spring:
   datasource:
-    url: "jdbc:hsqldb:mem:playsqd_db"
+    url: "jdbc:hsqldb:mem:playqd_db"
     username: bemonovoid
     password: bemonovoidpwd
   flyway:

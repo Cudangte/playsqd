@@ -1,6 +1,6 @@
 package com.bemonovoid.playsqd.persistence.jdbc.entity;
 
-import com.bemonovoid.playsqd.core.model.AudioSourceScanStatus;
+import com.bemonovoid.playsqd.core.model.ScanStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -51,7 +51,7 @@ public class AudioSourceEntity extends AuditableEntity {
     private final boolean deleteAllBeforeScan;
 
     @Column(COL_STATUS)
-    private final AudioSourceScanStatus status;
+    private final ScanStatus status;
 
     @Column(COL_STATUS_DETAILS)
     private final String statusDetails;

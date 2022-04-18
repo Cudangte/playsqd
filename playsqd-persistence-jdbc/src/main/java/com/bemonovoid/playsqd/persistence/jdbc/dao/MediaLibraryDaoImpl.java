@@ -6,7 +6,7 @@ import com.bemonovoid.playsqd.core.model.Album;
 import com.bemonovoid.playsqd.core.model.AlbumInfo;
 import com.bemonovoid.playsqd.core.model.Artist;
 import com.bemonovoid.playsqd.core.model.ArtistInfo;
-import com.bemonovoid.playsqd.core.model.ScannableItemInfo;
+import com.bemonovoid.playsqd.core.model.LibraryItemInfo;
 import com.bemonovoid.playsqd.core.model.Song;
 import com.bemonovoid.playsqd.core.service.AlbumSearchCriteria;
 import com.bemonovoid.playsqd.core.service.ArtistSearchCriteria;
@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -94,7 +95,6 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
             return new PageableResultImpl<>(new PageImpl<>(albumInfos, pageRequest, albumsCount));
         }
     }
-
     @Override
     public PageableResult<Song> getArtistAlbumSongs(String albumId) {
         Artist artist = null;
@@ -121,18 +121,37 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
                         .totalTimeInSeconds(albumTimeInSeconds)
                         .build();
             }
-            songs.add(songFromEntity(entity).artist(artist).album(album).build());
+            songs.add(songFromEntity(entity));
         }
         return new PageableResultImpl<>(new PageImpl<>(songs));
     }
 
+    @Override
+    public PageableResult<Song> getChannelHistorySongs(long channelId) {
+
+        return new PageableResultImpl<>(new PageImpl<>(null));
+    }
 
     @Override
     public Song getSong(long songId) {
-        LibraryItemEntity entity = getLibraryItemEntityById(songId);
-        Artist artist = artistFromEntity(entity);
-        Album album = albumFromEntity(entity).artist(artist).build();
-        return songFromEntity(entity).artist(artist).album(album).build();
+        return songFromEntity(getLibraryItemEntityById(songId));
+    }
+
+    @Override
+    public Optional<Song> getRandomSongByGenre(String genre) {
+        return repository.findRandomSongByGenre(genre)
+                .map(this::songFromEntity);
+    }
+
+    @Override
+    public Optional<Song> findRandomGenreSongNotYetStreamedByChannelId(long channelId, String genre) {
+        return repository.findRandomGenreSongNotYetStreamedByChannelId(channelId, genre)
+                .map(this::songFromEntity);
+    }
+
+    @Override
+    public boolean existsByAlbumGenreLikeIgnoreCase(String genre) {
+        return repository.existsByAlbumGenreLikeIgnoreCase(genre);
     }
 
     @Override
@@ -165,10 +184,10 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
     }
 
     @Override
-    public int addLibraryItems(Stream<ScannableItemInfo> itemsStream) {
+    public int addLibraryItems(Stream<LibraryItemInfo> libraryItemsStream) {
         int itemsScannedCount = 0;
 
-        SqlParameterSource[] sqlParameterSources = itemsStream
+        SqlParameterSource[] sqlParameterSources = libraryItemsStream
                 .map(DataMappers::audioFileToSqlParametersSource)
                 .toArray(SqlParameterSource[]::new);
 
@@ -201,19 +220,9 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
         }
     }
 
-    private Artist artistFromEntity(LibraryItemEntity entity) {
-        return Artist.builder().id(entity.getArtistId()).name(entity.getArtistName()).build();
-    }
-
-    private Album.AlbumBuilder albumFromEntity(LibraryItemEntity entity) {
-        return Album.builder()
-                .id(entity.getAlbumId())
-                .name(entity.getAlbumName())
-                .year(entity.getAlbumYear())
-                .genre(entity.getAlbumGenre());
-    }
-
-    private Song.SongBuilder songFromEntity(LibraryItemEntity entity) {
+    private Song songFromEntity(LibraryItemEntity entity) {
+        Artist artist = artistFromEntity(entity);
+        Album album = albumFromEntity(entity).artist(artist).build();
         return Song.builder()
                 .id(entity.getId())
                 .name(entity.getTrackName())
@@ -229,7 +238,22 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
                 .fileExtension(entity.getFileExtension())
                 .fileLocation(entity.getFileLocation())
                 .favorite(entity.isFavorite())
-                .playCount(entity.getPlayCount());
+                .playCount(entity.getPlayCount())
+                .artist(artist)
+                .album(album)
+                .build();
+    }
+
+    private Artist artistFromEntity(LibraryItemEntity entity) {
+        return Artist.builder().id(entity.getArtistId()).name(entity.getArtistName()).build();
+    }
+
+    private Album.AlbumBuilder albumFromEntity(LibraryItemEntity entity) {
+        return Album.builder()
+                .id(entity.getAlbumId())
+                .name(entity.getAlbumName())
+                .year(entity.getAlbumYear())
+                .genre(entity.getAlbumGenre());
     }
 
 }

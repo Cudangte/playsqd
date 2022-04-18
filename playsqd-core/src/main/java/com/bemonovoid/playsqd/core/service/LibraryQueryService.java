@@ -16,6 +16,8 @@ public interface LibraryQueryService {
 
     Song getSong(long songId);
 
+    Optional<Song> getRandomSongByGenre(String genre);
+
     Optional<byte[]> getSongArtwork(long songId);
 
     Optional<byte[]> getAlbumArtwork(String albumId);

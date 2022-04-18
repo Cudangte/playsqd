@@ -1,6 +1,6 @@
 package com.bemonovoid.playsqd.core.model;
 
-public enum AudioSourceScanStatus {
+public enum ScanStatus {
 
     FAILED,
 

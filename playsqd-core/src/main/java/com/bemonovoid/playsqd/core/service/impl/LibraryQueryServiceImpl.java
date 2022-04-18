@@ -48,6 +48,11 @@ class LibraryQueryServiceImpl implements LibraryQueryService {
     }
 
     @Override
+    public Optional<Song> getRandomSongByGenre(String genre) {
+        return mediaLibraryDao.getRandomSongByGenre(genre);
+    }
+
+    @Override
     public Optional<byte[]> getSongArtwork(long songId) {
         String songLocation = mediaLibraryDao.getSongLocation(songId);
         AudioFile audioFile = audioFileReader.read(Paths.get(songLocation).toFile());

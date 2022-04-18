@@ -1,15 +1,14 @@
 package com.bemonovoid.playsqd.core.dao;
 
-import com.bemonovoid.playsqd.core.audio.AudioFile;
 import com.bemonovoid.playsqd.core.model.AlbumInfo;
 import com.bemonovoid.playsqd.core.model.ArtistInfo;
-import com.bemonovoid.playsqd.core.model.ScannableItemInfo;
+import com.bemonovoid.playsqd.core.model.LibraryItemInfo;
 import com.bemonovoid.playsqd.core.model.Song;
 import com.bemonovoid.playsqd.core.service.AlbumSearchCriteria;
 import com.bemonovoid.playsqd.core.service.ArtistSearchCriteria;
 import com.bemonovoid.playsqd.core.service.PageableResult;
-import com.bemonovoid.playsqd.core.service.PageableSearch;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -21,7 +20,15 @@ public interface MediaLibraryDao {
 
     PageableResult<Song> getArtistAlbumSongs(String albumId);
 
+    PageableResult<Song> getChannelHistorySongs(long channelId);
+
     Song getSong(long songId);
+
+    Optional<Song> getRandomSongByGenre(String genre);
+
+    Optional<Song> findRandomGenreSongNotYetStreamedByChannelId(long channelId, String genre);
+
+    boolean existsByAlbumGenreLikeIgnoreCase(String genre);
 
     String getSongLocation(long songId);
 
@@ -33,5 +40,5 @@ public interface MediaLibraryDao {
 
     void deleteAllByLocation(String location);
 
-    int addLibraryItems(Stream<ScannableItemInfo> itemsStream);
+    int addLibraryItems(Stream<LibraryItemInfo> itemsStream);
 }

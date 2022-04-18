@@ -1,7 +1,7 @@
 package com.bemonovoid.playsqd.persistence.jdbc.dao;
 
 import com.bemonovoid.playsqd.core.audio.AudioFile;
-import com.bemonovoid.playsqd.core.model.ScannableItemInfo;
+import com.bemonovoid.playsqd.core.model.LibraryItemInfo;
 import com.bemonovoid.playsqd.persistence.jdbc.entity.LibraryItemEntity;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
@@ -10,10 +10,10 @@ import java.time.LocalDateTime;
 
 public abstract class DataMappers {
 
-    static SqlParameterSource audioFileToSqlParametersSource(ScannableItemInfo scannableItemInfo) {
-        AudioFile audioFile = scannableItemInfo.item();
-        String artistId = scannableItemInfo.metadata().get("artistId");
-        String albumId = scannableItemInfo.metadata().get("albumId");
+    static SqlParameterSource audioFileToSqlParametersSource(LibraryItemInfo libraryItemInfo) {
+        AudioFile audioFile = libraryItemInfo.item();
+        String artistId = libraryItemInfo.metadata().get("artistId");
+        String albumId = libraryItemInfo.metadata().get("albumId");
 
         return new MapSqlParameterSource()
 

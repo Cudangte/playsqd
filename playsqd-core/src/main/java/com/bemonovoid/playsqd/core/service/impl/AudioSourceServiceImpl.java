@@ -42,9 +42,7 @@ class AudioSourceServiceImpl implements AudioSourceService {
 
         AudioSource audioSource = audioSourceDao.save(source);
 
-        if (source.autoScanOnCreate()) {
-            eventPublisher.publishEvent(new AudioSourceCreatedEvent(this, audioSource));
-        }
+        eventPublisher.publishEvent(new AudioSourceCreatedEvent(this, audioSource));
 
         return audioSource.id();
     }

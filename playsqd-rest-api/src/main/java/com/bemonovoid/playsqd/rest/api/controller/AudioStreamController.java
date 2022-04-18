@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.AbstractMessageConverterMethodProcessor;
 
 import java.nio.file.Paths;
 
@@ -24,14 +25,14 @@ class AudioStreamController {
     }
 
     /**
-     * // See: Spring's AbstractMessageConverterMethodProcessor implementation that handles byte ranges
-     * @param songId
+     * See: Spring's {@link AbstractMessageConverterMethodProcessor} implementation that handles byte ranges
+     * @param streamingItemId
      * @return Audio file stream at the given byte range.
      */
-    @GetMapping("/songs/{songId}/stream")
-    ResponseEntity<Resource> audioStream(@PathVariable long songId) {
+    @GetMapping("/{streamingItemId}")
+    ResponseEntity<Resource> audioStream(@PathVariable long streamingItemId) {
 
-        String fileLocation = libraryQueryService.getSong(songId).getFileLocation();
+        String fileLocation = libraryQueryService.getSong(streamingItemId).getFileLocation();
         String fileType = fileLocation.substring(fileLocation.lastIndexOf(".") + 1);
         if ("mp3".equalsIgnoreCase(fileType)) {
             fileType = "mpeg";
@@ -44,4 +45,5 @@ class AudioStreamController {
                 .header(HttpHeaders.CONTENT_TYPE, "audio/" + fileType)
                 .body(new FileSystemResource(Paths.get(fileLocation)));
     }
+
 }

@@ -4,11 +4,11 @@ import com.bemonovoid.playsqd.core.dao.AudioSourceDao;
 import com.bemonovoid.playsqd.core.exception.PlayqdException;
 import com.bemonovoid.playsqd.core.model.AudioSource;
 import com.bemonovoid.playsqd.core.model.AudioSourceScanLog;
-import com.bemonovoid.playsqd.core.model.AudioSourceScanStatus;
+import com.bemonovoid.playsqd.core.model.ScanStatus;
 import com.bemonovoid.playsqd.persistence.jdbc.entity.AudioSourceEntity;
 import com.bemonovoid.playsqd.persistence.jdbc.entity.AudioSourceLogEntity;
-import com.bemonovoid.playsqd.persistence.jdbc.repository.AudioSourceRepository;
 import com.bemonovoid.playsqd.persistence.jdbc.repository.AudioSourceLogRepository;
+import com.bemonovoid.playsqd.persistence.jdbc.repository.AudioSourceRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -62,7 +62,7 @@ class AudioSourceDaoImpl implements AudioSourceDao {
                     .autoScanOnRestart(audioSource.autoScanOnRestart())
                     .deleteAllBeforeScan(audioSource.deleteAllBeforeScan())
                     .deleteMissing(audioSource.deleteMissing())
-                    .status(AudioSourceScanStatus.CREATED)
+                    .status(ScanStatus.CREATED)
                     .build();
         } else {
             entity = repository.findByIdOrThrow(audioSource.id());
@@ -83,11 +83,12 @@ class AudioSourceDaoImpl implements AudioSourceDao {
     }
 
     @Override
-    public void saveLog(AudioSourceScanLog directoryScanLog) {
+    public void saveLog(AudioSourceScanLog scanLog) {
         AudioSourceLogEntity entity = AudioSourceLogEntity.builder()
-                .sourceDirectory(directoryScanLog.scanDirectory())
-                .scanDurationInMillis(directoryScanLog.scanDuration().toMillis())
-                .filesScanned(directoryScanLog.filesScanned())
+                .sourceId(scanLog.sourceId())
+                .itemsScanned(scanLog.itemsScanned())
+                .itemsMissing(scanLog.itemsMissing())
+                .scanDurationInMillis(scanLog.scanDuration().toMillis())
                 .build();
         logRepository.save(entity);
     }
