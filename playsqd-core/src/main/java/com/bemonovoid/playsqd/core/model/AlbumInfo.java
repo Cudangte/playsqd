@@ -8,7 +8,7 @@ public record AlbumInfo(@JsonProperty("artist_id") String artistid,
                         String name,
                         String year,
                         String genre,
-                        @JsonProperty("songs_count") int songscount,
+                        @JsonProperty("songs_count") int trackcount,
                         @JsonProperty("total_time_in_seconds") int totaltimeinseconds) {
 
 

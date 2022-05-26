@@ -17,7 +17,8 @@ class JTaggerAudioFileReader implements AudioFileReader {
         try {
             return Optional.of(read(file));
         } catch (PlayqdException e) {
-            log.error(e.getMessage());
+            String message = String.format("JTagger was unable to read AudioFile from: %s", file.getAbsolutePath());
+            log.error(message, e);
             return Optional.empty();
         }
     }
@@ -27,8 +28,10 @@ class JTaggerAudioFileReader implements AudioFileReader {
         try {
             return new JTaggerAudioFile(AudioFileIO.read(file));
         } catch (Exception e) {
-            String message = String.format("Unable to read AudioFile from: %s", file.getAbsolutePath());
+            String message = String.format("JTagger was unable to read AudioFile from: %s", file.getAbsolutePath());
+            log.error(message, e);
             throw PlayqdException.ioException(message, e);
         }
     }
+
 }

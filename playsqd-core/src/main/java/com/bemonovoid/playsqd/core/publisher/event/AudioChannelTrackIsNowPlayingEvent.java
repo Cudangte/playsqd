@@ -8,12 +8,12 @@ import org.springframework.context.ApplicationEvent;
 @Getter
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-public class AudioChannelItemStreamedEvent extends ApplicationEvent {
+public class AudioChannelTrackIsNowPlayingEvent extends ApplicationEvent {
 
     private final long channelId;
     private final long streamedItemId;
 
-    public AudioChannelItemStreamedEvent(Object source, long channelId, long streamedItemId) {
+    public AudioChannelTrackIsNowPlayingEvent(Object source, long channelId, long streamedItemId) {
         super(source);
         this.channelId = channelId;
         this.streamedItemId = streamedItemId;

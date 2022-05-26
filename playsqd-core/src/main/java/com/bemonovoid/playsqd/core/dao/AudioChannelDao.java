@@ -1,11 +1,11 @@
 package com.bemonovoid.playsqd.core.dao;
 
 import com.bemonovoid.playsqd.core.exception.PlayqdException;
-import com.bemonovoid.playsqd.core.model.Song;
+import com.bemonovoid.playsqd.core.model.AudioTrack;
 import com.bemonovoid.playsqd.core.model.channel.AudioChannel;
-import com.bemonovoid.playsqd.core.model.channel.AudioChannelPlaybackItem;
+import com.bemonovoid.playsqd.core.model.channel.AudioChannelPlayedTrack;
 import com.bemonovoid.playsqd.core.model.channel.AudioChannelState;
-import com.bemonovoid.playsqd.core.model.channel.AudioChannelStreamingInfo;
+import com.bemonovoid.playsqd.core.model.channel.AudioChannelNowPlayingTrack;
 import com.bemonovoid.playsqd.core.model.channel.NewAudioChannelData;
 
 import java.util.Collection;
@@ -16,31 +16,31 @@ public interface AudioChannelDao {
 
     AudioChannel createChannel(NewAudioChannelData channelData);
 
-    void modifyChannelState(long channelId, AudioChannelState newState);
+    void updateState(long channelId, AudioChannelState newState);
 
-    default AudioChannel findChannelByIdOrThrow(long channelId) {
-        return findChannelById(channelId)
-                .orElseThrow(() -> PlayqdException.objectDoesNotExistException(channelId, "AudioChannel"));
-    }
+    Optional<AudioChannel> findById(long channelId);
 
-    Optional<AudioChannel> findChannelById(long channelId);
+    List<AudioChannel> findAll();
 
-    List<AudioChannel> findAllChannels();
+    Collection<AudioChannelPlayedTrack> findPlayedTracks(long channelId);
 
-    Collection<AudioChannelPlaybackItem> finaAllChannelPlaybackSongs(long channelId);
+    AudioChannelNowPlayingTrack createNowPlayingTrack(long channelId, AudioTrack audioTrack);
 
-    default AudioChannelStreamingInfo findChannelStreamInfoByChannelIdOrThrow(long channelId) {
-        return findChannelStreamInfoByChannelId(channelId)
+    AudioChannelNowPlayingTrack updateNowPlayingTrack(long channelId, AudioTrack audioTrack);
+
+    Optional<AudioChannelNowPlayingTrack> findNowPLayingTrackByChannelId(long channelId);
+
+    void setAudioTrackAsPlayed(long channelId, long playedTrackId);
+
+    void deletePlayedTracksByChannelId(long channelId);
+
+    default AudioChannelNowPlayingTrack findChannelStreamInfoByChannelIdOrThrow(long channelId) {
+        return findNowPLayingTrackByChannelId(channelId)
                 .orElseThrow(() -> PlayqdException.objectDoesNotExistException(channelId, "AudioChannelStreamInfo"));
     }
 
-    Optional<AudioChannelStreamingInfo> findChannelStreamInfoByChannelId(long channelId);
-
-    AudioChannelStreamingInfo createChannelStreamInfo(long channelId, Song song);
-
-    AudioChannelStreamingInfo updateChannelStreamInfo(long channelId, Song song);
-
-    void addStreamedItemToHistory(long channelId, long streamedItemId);
-
-    void deletePlaybackHistory(long channelId);
+    default AudioChannel findChannelByIdOrThrow(long channelId) {
+        return findById(channelId)
+                .orElseThrow(() -> PlayqdException.objectDoesNotExistException(channelId, "AudioChannel"));
+    }
 }

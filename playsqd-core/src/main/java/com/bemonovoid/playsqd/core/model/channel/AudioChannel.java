@@ -2,6 +2,8 @@ package com.bemonovoid.playsqd.core.model.channel;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import java.util.List;
+
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record AudioChannel(long id,
                            String name,
@@ -9,5 +11,6 @@ public record AudioChannel(long id,
                            AudioChannelState state,
                            AudioChannelType type,
                            AudioChannelSelection selection,
-                           String source) {
+                           boolean repeat,
+                           List<String> sources) {
 }

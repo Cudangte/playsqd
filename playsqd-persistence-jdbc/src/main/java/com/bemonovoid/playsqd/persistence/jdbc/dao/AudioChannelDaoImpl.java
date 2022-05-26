@@ -1,23 +1,24 @@
 package com.bemonovoid.playsqd.persistence.jdbc.dao;
 
 import com.bemonovoid.playsqd.core.dao.AudioChannelDao;
-import com.bemonovoid.playsqd.core.model.Song;
+import com.bemonovoid.playsqd.core.model.AudioTrack;
 import com.bemonovoid.playsqd.core.model.channel.AudioChannel;
-import com.bemonovoid.playsqd.core.model.channel.AudioChannelPlaybackItem;
+import com.bemonovoid.playsqd.core.model.channel.AudioChannelPlayedTrack;
 import com.bemonovoid.playsqd.core.model.channel.AudioChannelSelection;
 import com.bemonovoid.playsqd.core.model.channel.AudioChannelState;
-import com.bemonovoid.playsqd.core.model.channel.AudioChannelStreamingInfo;
+import com.bemonovoid.playsqd.core.model.channel.AudioChannelNowPlayingTrack;
 import com.bemonovoid.playsqd.core.model.channel.NewAudioChannelData;
 import com.bemonovoid.playsqd.persistence.jdbc.entity.AudioChannelEntity;
-import com.bemonovoid.playsqd.persistence.jdbc.entity.AudioChannelStreamInfoEntity;
-import com.bemonovoid.playsqd.persistence.jdbc.entity.AudioChannelPlaybackEntity;
+import com.bemonovoid.playsqd.persistence.jdbc.entity.AudioChannelNowPlayingTrackEntity;
+import com.bemonovoid.playsqd.persistence.jdbc.entity.AudioChannelPlayedTrackEntity;
 import com.bemonovoid.playsqd.persistence.jdbc.entity.AuditingEntity;
 import com.bemonovoid.playsqd.persistence.jdbc.repository.AudioChannelRepository;
-import com.bemonovoid.playsqd.persistence.jdbc.repository.AudioChannelStreamInfoRepository;
-import com.bemonovoid.playsqd.persistence.jdbc.repository.AudioChannelStreamPlaybackRepository;
+import com.bemonovoid.playsqd.persistence.jdbc.repository.AudioChannelNowPlayingTrackRepository;
+import com.bemonovoid.playsqd.persistence.jdbc.repository.AudioChannelPlayedTrackRepository;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -27,8 +28,8 @@ import java.util.stream.Stream;
 
 @Component
 record AudioChannelDaoImpl(AudioChannelRepository channelRepository,
-                           AudioChannelStreamInfoRepository streamInfoRepository,
-                           AudioChannelStreamPlaybackRepository playbackRepository) implements AudioChannelDao {
+                           AudioChannelNowPlayingTrackRepository channelNowPlayingRepository,
+                           AudioChannelPlayedTrackRepository channelPlayedTrackRepository) implements AudioChannelDao {
 
     @Override
     public AudioChannel createChannel(NewAudioChannelData channelData) {
@@ -38,24 +39,25 @@ record AudioChannelDaoImpl(AudioChannelRepository channelRepository,
                 channelData.description(),
                 AudioChannelState.NEW,
                 channelData.type(),
+                channelData.repeat(),
                 AudioChannelSelection.RANDOM,
-                channelData.source(),
+                String.join(",", channelData.sources()),
                 AuditingEntity.created());
         return fromChannelEntity(channelRepository.save(entity));
     }
 
     @Override
-    public void modifyChannelState(long channelId, AudioChannelState newState) {
+    public void updateState(long channelId, AudioChannelState newState) {
         channelRepository.setNewState(channelId, newState, LocalDateTime.now());
     }
 
     @Override
-    public Optional<AudioChannel> findChannelById(long channelId) {
+    public Optional<AudioChannel> findById(long channelId) {
         return channelRepository.findById(channelId).map(this::fromChannelEntity);
     }
 
     @Override
-    public List<AudioChannel> findAllChannels() {
+    public List<AudioChannel> findAll() {
         Iterator<AudioChannelEntity> iterator = channelRepository.findAll().iterator();
         return Stream.generate(() -> null)
                 .takeWhile(x -> iterator.hasNext())
@@ -65,46 +67,47 @@ record AudioChannelDaoImpl(AudioChannelRepository channelRepository,
     }
 
     @Override
-    public Collection<AudioChannelPlaybackItem> finaAllChannelPlaybackSongs(long channelId) {
-        return playbackRepository.finaAllChannelPlaybackSongs(channelId);
+    public Collection<AudioChannelPlayedTrack> findPlayedTracks(long channelId) {
+        return channelPlayedTrackRepository.findAudioTracksByChannelId(channelId);
     }
 
     @Override
-    public Optional<AudioChannelStreamingInfo> findChannelStreamInfoByChannelId(long channelId) {
-        return streamInfoRepository.findByChannelId(channelId)
-                .map(this::fromChannelStreamInfo);
+    public Optional<AudioChannelNowPlayingTrack> findNowPLayingTrackByChannelId(long channelId) {
+        return channelNowPlayingRepository.findByChannelId(channelId)
+                .map(this::fromChannelNowPlayingEntity);
     }
 
     @Override
-    public AudioChannelStreamingInfo createChannelStreamInfo(long channelId, Song song) {
-        return fromChannelStreamInfo(streamInfoRepository.save(new AudioChannelStreamInfoEntity(
+    public AudioChannelNowPlayingTrack createNowPlayingTrack(long channelId, AudioTrack audioTrack) {
+        return fromChannelNowPlayingEntity(channelNowPlayingRepository.save(new AudioChannelNowPlayingTrackEntity(
                 null,
                 channelId,
-                song.getId(),
+                audioTrack.id(),
+                audioTrack.trackLengthInSeconds(),
                 LocalDateTime.now(),
-                song.getTrackLengthInSeconds(),
                 AuditingEntity.created())));
     }
 
     @Override
-    public AudioChannelStreamingInfo updateChannelStreamInfo(long channelId, Song song) {
-        streamInfoRepository.setStreamingItemId(
-                channelId, song.getId(), LocalDateTime.now(), song.getTrackLengthInSeconds());
+    public AudioChannelNowPlayingTrack updateNowPlayingTrack(long channelId, AudioTrack audioTrack) {
+        channelNowPlayingRepository.updateNowPlayingTrack(
+                channelId, audioTrack.id(), audioTrack.trackLengthInSeconds(), LocalDateTime.now());
         return findChannelStreamInfoByChannelIdOrThrow(channelId);
     }
 
     @Override
-    public void addStreamedItemToHistory(long channelId, long streamedItemId) {
-        var entity = new AudioChannelPlaybackEntity(null,
+    public void setAudioTrackAsPlayed(long channelId, long audioTrackId) {
+        var entity = new AudioChannelPlayedTrackEntity(
+                null,
                 channelId,
-                streamedItemId,
+                audioTrackId,
                 AuditingEntity.created());
-        playbackRepository.save(entity);
+        channelPlayedTrackRepository.save(entity);
     }
 
     @Override
-    public void deletePlaybackHistory(long channelId) {
-        playbackRepository.deleteAllByChannelId(channelId);
+    public void deletePlayedTracksByChannelId(long channelId) {
+        channelPlayedTrackRepository.deleteAllByChannelId(channelId);
     }
 
     private AudioChannel fromChannelEntity(AudioChannelEntity entity) {
@@ -115,15 +118,16 @@ record AudioChannelDaoImpl(AudioChannelRepository channelRepository,
                 entity.state(),
                 entity.type(),
                 entity.itemSelection(),
-                entity.source());
+                entity.repeat(),
+                Arrays.stream(entity.source().split(",")).toList());
     }
 
-    private AudioChannelStreamingInfo fromChannelStreamInfo(AudioChannelStreamInfoEntity entity) {
-        return new AudioChannelStreamingInfo(
+    private AudioChannelNowPlayingTrack fromChannelNowPlayingEntity(AudioChannelNowPlayingTrackEntity entity) {
+        return new AudioChannelNowPlayingTrack(
                 entity.id(),
                 entity.channelId(),
-                entity.streamingItemId(),
-                entity.steamingTimeStamp(),
-                entity.streamingItemLengthInSec());
+                entity.audioTrackId(),
+                entity.audioTrackLengthInSec(),
+                entity.playStartDate());
     }
 }

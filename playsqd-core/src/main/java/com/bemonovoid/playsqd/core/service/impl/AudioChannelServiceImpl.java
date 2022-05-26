@@ -2,15 +2,16 @@ package com.bemonovoid.playsqd.core.service.impl;
 
 import com.bemonovoid.playsqd.core.config.properties.AudioChannelConfiguration;
 import com.bemonovoid.playsqd.core.dao.AudioChannelDao;
-import com.bemonovoid.playsqd.core.dao.MediaLibraryDao;
+import com.bemonovoid.playsqd.core.dao.AudioTrackDao;
 import com.bemonovoid.playsqd.core.exception.PlayqdException;
-import com.bemonovoid.playsqd.core.model.Song;
+import com.bemonovoid.playsqd.core.model.AudioTrack;
 import com.bemonovoid.playsqd.core.model.channel.AudioChannel;
-import com.bemonovoid.playsqd.core.model.channel.AudioChannelPlaybackItem;
+import com.bemonovoid.playsqd.core.model.channel.AudioChannelWithPlaybackInfo;
+import com.bemonovoid.playsqd.core.model.channel.AudioChannelPlayedTrack;
 import com.bemonovoid.playsqd.core.model.channel.AudioChannelState;
-import com.bemonovoid.playsqd.core.model.channel.AudioChannelWithStreamingItemInfo;
+import com.bemonovoid.playsqd.core.model.channel.AudioChannelTrack;
 import com.bemonovoid.playsqd.core.model.channel.NewAudioChannelData;
-import com.bemonovoid.playsqd.core.publisher.event.AudioChannelItemStreamedEvent;
+import com.bemonovoid.playsqd.core.publisher.event.AudioChannelTrackIsNowPlayingEvent;
 import com.bemonovoid.playsqd.core.service.AudioChannelService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -26,13 +27,13 @@ import java.util.Optional;
 record AudioChannelServiceImpl(ApplicationEventPublisher publisher,
                                AudioChannelConfiguration audioChannelConfiguration,
                                AudioChannelDao audioChannelDao,
-                               MediaLibraryDao mediaLibraryDao) implements AudioChannelService {
+                               AudioTrackDao audioTrackDao) implements AudioChannelService {
 
     @Override
     public AudioChannel create(NewAudioChannelData channelData) {
         AudioChannel audioChannel = audioChannelDao.createChannel(channelData);
-        if (!mediaLibraryDao.existsByAlbumGenreLikeIgnoreCase(audioChannel.source())) {
-            audioChannelDao.modifyChannelState(audioChannel.id(), AudioChannelState.EMPTY);
+        if (!audioTrackDao.existsByAlbumGenreInIgnoreCase(audioChannel.sources())) {
+            audioChannelDao.updateState(audioChannel.id(), AudioChannelState.EMPTY);
         }
         log.info("Audio channel with id: '{}' has successfully been created", audioChannel.id());
         return audioChannel;
@@ -44,74 +45,83 @@ record AudioChannelServiceImpl(ApplicationEventPublisher publisher,
     }
 
     @Override
-    public Collection<AudioChannelPlaybackItem> getChannelPlaybackSongs(long channelId) {
-        return audioChannelDao.finaAllChannelPlaybackSongs(channelId);
+    public AudioChannelWithPlaybackInfo getChannelExtended(long channelId) {
+        AudioChannel channel = getChannel(channelId);
+        return new AudioChannelWithPlaybackInfo(
+                channel,
+                getChannelPlayedTracks(channelId),
+                audioTrackDao().getCountByGenres(channel.sources()));
+    }
+
+    @Override
+    public Collection<AudioChannelPlayedTrack> getChannelPlayedTracks(long channelId) {
+        return audioChannelDao.findPlayedTracks(channelId);
     }
 
     @Override
     public void deleteChannelPlaybackHistory(long channelId) {
-        audioChannelDao.deletePlaybackHistory(channelId);
+        audioChannelDao.deletePlayedTracksByChannelId(channelId);
     }
 
     @Override
-    public synchronized AudioChannelWithStreamingItemInfo audioChannelWithStreamingItemInfo(long channelId) {
-        var mayBeChannelStreamInfo = audioChannelDao.findChannelStreamInfoByChannelId(channelId);
+    public synchronized AudioChannelTrack audioChannelNowPlayingTrack(long channelId) {
+        var mayBeNowPLayingTrack = audioChannelDao.findNowPLayingTrackByChannelId(channelId);
 
-        if (mayBeChannelStreamInfo.isEmpty()) {
-            var song = getNextChannelSongToPlay(channelId, getChannel(channelId).source());
-            var channelStreamInfo = audioChannelDao.createChannelStreamInfo(channelId, song);
+        if (mayBeNowPLayingTrack.isEmpty()) {
+            var audioTrack = getNextChannelSongToPlay(getChannel(channelId));
+            var nowPlayingTrack = audioChannelDao.createNowPlayingTrack(channelId, audioTrack);
 
-            publishChannelItemStreamedEvent(channelId, song.getId());
+            publishAudioTrackIsNowPlayingEvent(channelId, audioTrack.id());
 
-            return new AudioChannelWithStreamingItemInfo(channelId, song, channelStreamInfo.streamingTimestamp());
+            return new AudioChannelTrack(channelId, audioTrack, nowPlayingTrack.playStartDate());
         } else {
-            var steamInfo = mayBeChannelStreamInfo.get();
-            var streamingItemCalculatedEndDate =
-                    steamInfo.streamingTimestamp().plusSeconds(steamInfo.streamingItemLengthInSec());
+            var nowPlayingTrack = mayBeNowPLayingTrack.get();
+            var calculatedEndDate =
+                    nowPlayingTrack.playStartDate().plusSeconds(nowPlayingTrack.audioTrackItemLengthInSec());
 
-            if (streamingItemCalculatedEndDate.isBefore(LocalDateTime.now())) {
+            if (calculatedEndDate.isBefore(LocalDateTime.now())) {
                 log.info("Steaming item with id: '{}' may have reached the end, searching for next item to stream ...",
-                        steamInfo.streamingItemId());
+                        nowPlayingTrack.audioTrackId());
 
-                var song = getNextChannelSongToPlay(channelId, getChannel(channelId).source());
+                var audioTrack = getNextChannelSongToPlay(getChannel(channelId));
 
-                log.info("Next streaming item has successfully resolved to item with id: {}", song.getId());
+                log.info("Next streaming item has successfully resolved to item with id: {}", audioTrack.id());
 
-                var channelStreamInfo = audioChannelDao.updateChannelStreamInfo(channelId, song);
+                var nextNowPlayingTrack = audioChannelDao.updateNowPlayingTrack(channelId, audioTrack);
 
-                publishChannelItemStreamedEvent(channelId, song.getId());
+                publishAudioTrackIsNowPlayingEvent(channelId, audioTrack.id());
 
-                return new AudioChannelWithStreamingItemInfo(channelId, song, channelStreamInfo.streamingTimestamp());
+                return new AudioChannelTrack(channelId, audioTrack, nextNowPlayingTrack.playStartDate());
             }
 
-            var song = mediaLibraryDao.getSong(steamInfo.streamingItemId());
+            var song = audioTrackDao.getTrackById(nowPlayingTrack.audioTrackId());
 
             log.info("Current streaming item has not reached the end yet. Continue streaming the same item with id: {}",
-                    song.getId());
+                    song.id());
 
-            return new AudioChannelWithStreamingItemInfo(channelId, song, steamInfo.streamingTimestamp());
+            return new AudioChannelTrack(channelId, song, nowPlayingTrack.playStartDate());
         }
     }
 
     @Override
     public List<AudioChannel> getAllChannels() {
-        return audioChannelDao.findAllChannels();
+        return audioChannelDao.findAll();
     }
 
-    private void publishChannelItemStreamedEvent(long channelId, long streamedItemId) {
-        publisher.publishEvent(new AudioChannelItemStreamedEvent(this, channelId, streamedItemId));
+    private void publishAudioTrackIsNowPlayingEvent(long channelId, long audioTrackId) {
+        publisher.publishEvent(new AudioChannelTrackIsNowPlayingEvent(this, channelId, audioTrackId));
     }
 
-    private Song getNextChannelSongToPlay(long channelId, String genre) {
-        Optional<Song> nextSong = findRandomGenreSongNotYetStreamedByChannelId(channelId, genre);
+    private AudioTrack getNextChannelSongToPlay(AudioChannel channel) {
+        Optional<AudioTrack> nextSong = findRandomGenreSongNotYetStreamedByChannelId(channel.id(), channel.sources());
         if (nextSong.isEmpty() && audioChannelConfiguration.isRepeatAll()) {
-            audioChannelDao.deletePlaybackHistory(channelId);
-            nextSong = findRandomGenreSongNotYetStreamedByChannelId(channelId, genre);
+            audioChannelDao.deletePlayedTracksByChannelId(channel.id());
+            nextSong = findRandomGenreSongNotYetStreamedByChannelId(channel.id(), channel.sources());
         }
-        return nextSong.orElseThrow(() -> PlayqdException.objectDoesNotExistException(genre, "GenreSong"));
+        return nextSong.orElseThrow(() -> PlayqdException.objectDoesNotExistException(channel.sources(), "GenreSong"));
     }
 
-    private Optional<Song> findRandomGenreSongNotYetStreamedByChannelId(long channelId, String genre) {
-        return mediaLibraryDao.findRandomGenreSongNotYetStreamedByChannelId(channelId, genre);
+    private Optional<AudioTrack> findRandomGenreSongNotYetStreamedByChannelId(long channelId, Collection<String> genres) {
+        return audioTrackDao.findRandomGenreTrackNotYetPlayedByChannelId(channelId, genres);
     }
 }

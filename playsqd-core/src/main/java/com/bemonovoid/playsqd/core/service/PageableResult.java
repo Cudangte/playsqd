@@ -13,4 +13,8 @@ public interface PageableResult<T> {
     int getPageSize();
 
     List<T> getData();
+
+    default boolean isEmpty() {
+        return getData().isEmpty();
+    }
 }

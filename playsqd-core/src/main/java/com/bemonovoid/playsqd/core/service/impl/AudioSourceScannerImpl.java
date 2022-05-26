@@ -3,11 +3,12 @@ package com.bemonovoid.playsqd.core.service.impl;
 import com.bemonovoid.playsqd.core.audio.AudioFile;
 import com.bemonovoid.playsqd.core.audio.AudioFileReader;
 import com.bemonovoid.playsqd.core.dao.AudioSourceDao;
-import com.bemonovoid.playsqd.core.dao.MediaLibraryDao;
+import com.bemonovoid.playsqd.core.dao.AudioTrackDao;
 import com.bemonovoid.playsqd.core.model.AudioSource;
 import com.bemonovoid.playsqd.core.model.AudioSourceScanLog;
 import com.bemonovoid.playsqd.core.model.ScanStatus;
-import com.bemonovoid.playsqd.core.model.LibraryItemInfo;
+import com.bemonovoid.playsqd.core.model.ScannedAudioFileMetadata;
+import com.bemonovoid.playsqd.core.model.ScannedAudioFileWithMetadata;
 import com.bemonovoid.playsqd.core.service.AudioSourceScanner;
 import com.bemonovoid.playsqd.core.utils.FileUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -31,20 +32,18 @@ import java.util.stream.Stream;
 @Component
 class AudioSourceScannerImpl implements AudioSourceScanner {
 
-    private static final Set<String> SUPPORTED_EXTENSIONS = Set.of("flac", "m4a", "m4p", "mp3", "ogg", "wav", "wma");
-
     private final Map<String, String> artistIds = Collections.synchronizedMap(new LinkedHashMap<>());
     private final Map<String, Map<String, String>> albumIds = Collections.synchronizedMap(new LinkedHashMap<>());
 
     private final AudioSourceDao audioSourceDao;
-    private final MediaLibraryDao mediaLibraryDao;
+    private final AudioTrackDao audioTrackDao;
     private final AudioFileReader audioFileReader;
 
     AudioSourceScannerImpl(AudioSourceDao audioSourceDao,
-                           MediaLibraryDao mediaLibraryDao,
+                           AudioTrackDao audioTrackDao,
                            AudioFileReader audioFileReader) {
         this.audioSourceDao = audioSourceDao;
-        this.mediaLibraryDao = mediaLibraryDao;
+        this.audioTrackDao = audioTrackDao;
         this.audioFileReader = audioFileReader;
     }
 
@@ -65,19 +64,19 @@ class AudioSourceScannerImpl implements AudioSourceScanner {
 
             prepare(audioSource);
 
-            Set<String> alreadyIndexedLocations = mediaLibraryDao.getAllLocations();
+            Set<String> alreadyIndexedLocations = audioTrackDao.getAllLocations();
 
-            Stream<LibraryItemInfo> stream = subdirectories
+            Stream<ScannedAudioFileWithMetadata> stream = subdirectories
                     .map(Path::toFile)
                     .filter(File::isFile)
-                    .filter(f -> SUPPORTED_EXTENSIONS.contains(FileUtils.getFileExtension(f)))
+                    .filter(FileUtils::isSupportedAudioFile)
                     .filter(f -> !alreadyIndexedLocations.remove(f.getAbsolutePath()))
                     .map(audioFileReader::readGracefully)
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .map(this::fromAudioFile);
 
-            count = mediaLibraryDao.addLibraryItems(stream);
+            count = audioTrackDao.mapToAudioTrackAndSave(stream);
 
             if (count == 0) {
                 log.info("Scan completed for source: {}. No files from the source were indexed. " +
@@ -109,20 +108,20 @@ class AudioSourceScannerImpl implements AudioSourceScanner {
         }
     }
 
-    private LibraryItemInfo fromAudioFile(AudioFile audioFile) {
+    private ScannedAudioFileWithMetadata fromAudioFile(AudioFile audioFile) {
         String artistId =
                 artistIds.computeIfAbsent(audioFile.getArtistName(), key -> RandomStringUtils.randomAlphabetic(8));
         Map<String, String> artistAlbums =
                 albumIds.computeIfAbsent(artistId, key -> Collections.synchronizedMap(new LinkedHashMap<>()));
         String albumId =
                 artistAlbums.computeIfAbsent(audioFile.getAlbumName(), key -> RandomStringUtils.randomAlphabetic(8));
-        return new LibraryItemInfo(audioFile, Map.of("artistId", artistId, "albumId", albumId));
+        return new ScannedAudioFileWithMetadata(audioFile, new ScannedAudioFileMetadata(artistId, albumId));
     }
 
     private void prepare(AudioSource audioSource) {
         audioSourceDao.save(audioSource.withNewStatus(ScanStatus.IN_PROGRESS, "Scanning ..."));
         if (audioSource.deleteAllBeforeScan()) {
-            mediaLibraryDao.deleteAllByLocation(audioSource.path());
+            audioTrackDao.deleteAllByLocation(audioSource.path());
         }
     }
 

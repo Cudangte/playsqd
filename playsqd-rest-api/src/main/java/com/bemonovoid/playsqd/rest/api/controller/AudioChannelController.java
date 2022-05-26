@@ -1,12 +1,11 @@
 package com.bemonovoid.playsqd.rest.api.controller;
 
 import com.bemonovoid.playsqd.core.model.channel.AudioChannel;
-import com.bemonovoid.playsqd.core.model.channel.AudioChannelListItem;
-import com.bemonovoid.playsqd.core.model.channel.AudioChannelPlaybackItem;
-import com.bemonovoid.playsqd.core.model.channel.AudioChannelWithPlaybackHistoryItems;
-import com.bemonovoid.playsqd.core.model.channel.AudioChannelWithStreamingItemInfo;
+import com.bemonovoid.playsqd.core.model.channel.AudioChannelWithPlaybackInfo;
+import com.bemonovoid.playsqd.core.model.channel.AudioChannelTrack;
 import com.bemonovoid.playsqd.core.model.channel.NewAudioChannelData;
 import com.bemonovoid.playsqd.core.service.AudioChannelService;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,10 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(ApiEndpoints.CHANNEL_API_PATH)
@@ -43,10 +40,8 @@ class AudioChannelController {
     }
 
     @GetMapping
-    List<AudioChannelListItem> audioChannels() {
-        return audioChannelService.getAllChannels().stream()
-                .map(audioChannel -> new AudioChannelListItem(audioChannel.id(), audioChannel.name()))
-                .collect(Collectors.toList());
+    List<AudioChannel> audioChannels() {
+        return audioChannelService.getAllChannels();
     }
 
     @GetMapping("/{channelId}")
@@ -55,25 +50,18 @@ class AudioChannelController {
     }
 
     @GetMapping("/{channelId}/extended")
-    AudioChannelWithPlaybackHistoryItems audioChannelWithPlaybackHistory(@PathVariable long channelId) {
-        return new AudioChannelWithPlaybackHistoryItems(
-                audioChannelService.getChannel(channelId),
-                audioChannelService.getChannelPlaybackSongs(channelId));
+    AudioChannelWithPlaybackInfo audioChannelWithPlaybackInfo(@PathVariable long channelId) {
+        return audioChannelService.getChannelExtended(channelId);
     }
 
-    @GetMapping("/{channelId}/history")
-    Collection<AudioChannelPlaybackItem> channelPlaybackHistory(@PathVariable long channelId) {
-        return audioChannelService.getChannelPlaybackSongs(channelId);
-    }
-
-    @DeleteMapping("/history/{channelId}")
-    void deleteChannelPlaybackHistory(@PathVariable long channelId) {
+    @DeleteMapping("/played/{channelId}")
+    void deleteChannelPlayedTracks(@PathVariable long channelId) {
         audioChannelService.deleteChannelPlaybackHistory(channelId);
     }
 
-    @GetMapping("/{channelId}/stream/info")
-    AudioChannelWithStreamingItemInfo audioChannelWithStreamingItemInfo(@PathVariable long channelId) {
-        return audioChannelService.audioChannelWithStreamingItemInfo(channelId);
+    @GetMapping("/{channelId}/playing")
+    AudioChannelTrack audioChannelNowPlayingTrack(@PathVariable long channelId) {
+        return audioChannelService.audioChannelNowPlayingTrack(channelId);
     }
 
 }

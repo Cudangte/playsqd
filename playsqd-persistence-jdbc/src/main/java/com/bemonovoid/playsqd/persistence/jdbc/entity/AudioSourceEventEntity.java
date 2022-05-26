@@ -15,10 +15,10 @@ import org.springframework.data.relational.core.mapping.Table;
 @AllArgsConstructor(onConstructor=@__({@PersistenceConstructor}))
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-@Table(AudioSourceLogEntity.TABLE_NAME)
-public class AudioSourceLogEntity extends AuditableEntity {
+@Table(AudioSourceEventEntity.TABLE_NAME)
+public class AudioSourceEventEntity extends AuditableEntity {
 
-    public static final String TABLE_NAME = "AUDIO_SOURCE_LOG";
+    public static final String TABLE_NAME = "AUDIO_SOURCE_EVENT";
 
     public static final String COL_ID = "ID";
     public static final String COL_SOURCE_ID = "SOURCE_ID";

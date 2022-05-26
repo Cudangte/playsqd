@@ -1,18 +1,20 @@
 package com.bemonovoid.playsqd.persistence.jdbc.dao;
 
-import com.bemonovoid.playsqd.core.dao.MediaLibraryDao;
+import com.bemonovoid.playsqd.core.dao.AudioTrackDao;
 import com.bemonovoid.playsqd.core.exception.PlayqdException;
 import com.bemonovoid.playsqd.core.model.Album;
 import com.bemonovoid.playsqd.core.model.AlbumInfo;
 import com.bemonovoid.playsqd.core.model.Artist;
 import com.bemonovoid.playsqd.core.model.ArtistInfo;
-import com.bemonovoid.playsqd.core.model.LibraryItemInfo;
-import com.bemonovoid.playsqd.core.model.Song;
+import com.bemonovoid.playsqd.core.model.AudioTrack;
+import com.bemonovoid.playsqd.core.model.Genre;
+import com.bemonovoid.playsqd.core.model.ScannedAudioFileWithMetadata;
+import com.bemonovoid.playsqd.core.model.channel.AudioTrackCountQueryResult;
 import com.bemonovoid.playsqd.core.service.AlbumSearchCriteria;
 import com.bemonovoid.playsqd.core.service.ArtistSearchCriteria;
 import com.bemonovoid.playsqd.core.service.PageableResult;
-import com.bemonovoid.playsqd.persistence.jdbc.entity.LibraryItemEntity;
-import com.bemonovoid.playsqd.persistence.jdbc.repository.LibraryItemRepository;
+import com.bemonovoid.playsqd.persistence.jdbc.entity.AudioTrackEntity;
+import com.bemonovoid.playsqd.persistence.jdbc.repository.AudioTrackRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -22,7 +24,7 @@ import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -33,15 +35,7 @@ import java.util.stream.Stream;
 
 @Slf4j
 @Component
-class MediaLibraryDaoImpl implements MediaLibraryDao {
-
-    private final JdbcTemplate jdbcTemplate;
-    private final LibraryItemRepository repository;
-
-    MediaLibraryDaoImpl(JdbcTemplate jdbcTemplate, LibraryItemRepository repository) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.repository = repository;
-    }
+record AudioTrackDaoImpl(JdbcTemplate jdbcTemplate, AudioTrackRepository repository) implements AudioTrackDao {
 
     @Override
     public PageableResult<ArtistInfo> getArtists(ArtistSearchCriteria searchCriteria) {
@@ -96,85 +90,56 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
         }
     }
     @Override
-    public PageableResult<Song> getArtistAlbumSongs(String albumId) {
-        Artist artist = null;
-        Album album = null;
-
-        List<LibraryItemEntity> albumItems = repository.findByAlbumId(albumId);
-
-        if (albumItems.isEmpty()) {
-            throw PlayqdException.objectDoesNotExistException("Album", albumId);
-        }
-
-        List<Song> songs = new ArrayList<>(albumItems.size());
-
-        for (LibraryItemEntity entity : albumItems) {
-            if (artist == null) {
-                artist = artistFromEntity(entity);
-            }
-            if (album == null) {
-                int albumTimeInSeconds =
-                        albumItems.stream().mapToInt(LibraryItemEntity::getTrackLength).sum();
-                album = albumFromEntity(entity)
-                        .artist(artist)
-                        .totalSongs(albumItems.size())
-                        .totalTimeInSeconds(albumTimeInSeconds)
-                        .build();
-            }
-            songs.add(songFromEntity(entity));
-        }
-        return new PageableResultImpl<>(new PageImpl<>(songs));
+    public List<AudioTrack> getAlbumTracks(String albumId) {
+        return repository.findByAlbumIdOrderByTrackNumberAsc(albumId).stream()
+                .map(this::fromEntity)
+                .toList();
     }
 
     @Override
-    public PageableResult<Song> getChannelHistorySongs(long channelId) {
-
-        return new PageableResultImpl<>(new PageImpl<>(null));
+    public AudioTrackCountQueryResult getCountByGenres(Collection<String> genres) {
+        return repository.countByGenreIn(genres);
     }
 
     @Override
-    public Song getSong(long songId) {
-        return songFromEntity(getLibraryItemEntityById(songId));
+    public AudioTrack getTrackById(long trackId) {
+        return fromEntity(audioTrackEntityById(trackId));
     }
 
     @Override
-    public Optional<Song> getRandomSongByGenre(String genre) {
-        return repository.findRandomSongByGenre(genre)
-                .map(this::songFromEntity);
+    public Optional<AudioTrack> getRandomTrackByGenre(String genre) {
+        return repository.findRandomTrackByGenre(genre)
+                .map(this::fromEntity);
     }
 
     @Override
-    public Optional<Song> findRandomGenreSongNotYetStreamedByChannelId(long channelId, String genre) {
-        return repository.findRandomGenreSongNotYetStreamedByChannelId(channelId, genre)
-                .map(this::songFromEntity);
+    public Optional<AudioTrack> findRandomGenreTrackNotYetPlayedByChannelId(long channelId, Collection<String> genres) {
+        return repository.findRandomGenreTrackNotYetPlayedByChannelId(channelId, genres)
+                .map(this::fromEntity);
     }
 
     @Override
-    public boolean existsByAlbumGenreLikeIgnoreCase(String genre) {
-        return repository.existsByAlbumGenreLikeIgnoreCase(genre);
+    public boolean existsByAlbumGenreInIgnoreCase(Collection<String> genres) {
+        return repository.existsByAlbumGenreInIgnoreCase(genres);
     }
 
     @Override
-    public String getSongLocation(long songId) {
-        return getLibraryItemEntityById(songId).getFileLocation();
-    }
-
-    @Override
-    public String getFirstAlbumSongLocation(String albumId) {
-        return repository.findAlbumSongLocation(albumId)
+    public AudioTrack getFirstTrackByAlbumId(String albumId) {
+        return repository.findFirstByAlbumId(albumId)
+                .map(this::fromEntity)
                 .orElseThrow(() -> PlayqdException.objectDoesNotExistException("Album", String.valueOf(albumId)));
     }
 
     @Override
     public void updateFavoriteStatus(long songId) {
-        Song song = getSong(songId);
-        updateSong(songId, List.of(LibraryItemEntity.COL_MISC_IS_FAVORITE), !song.isFavorite());
+        AudioTrack audioTrack = getTrackById(songId);
+        updateAudioTrack(songId, List.of(AudioTrackEntity.COL_MISC_IS_FAVORITE), !audioTrack.favorite());
     }
 
     @Override
     public Set<String> getAllLocations() {
         return Collections.synchronizedSet(new HashSet<>(jdbcTemplate.queryForList(
-                String.format("SELECT %s FROM %s", LibraryItemEntity.COL_FILE_LOCATION, LibraryItemEntity.TABLE_NAME),
+                String.format("SELECT %s FROM %s", AudioTrackEntity.COL_FILE_LOCATION, AudioTrackEntity.TABLE_NAME),
                 String.class)));
     }
 
@@ -184,10 +149,10 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
     }
 
     @Override
-    public int addLibraryItems(Stream<LibraryItemInfo> libraryItemsStream) {
+    public int mapToAudioTrackAndSave(Stream<ScannedAudioFileWithMetadata> scannedAudioFileWithMetadataStream) {
         int itemsScannedCount = 0;
 
-        SqlParameterSource[] sqlParameterSources = libraryItemsStream
+        SqlParameterSource[] sqlParameterSources = scannedAudioFileWithMetadataStream
                 .map(DataMappers::audioFileToSqlParametersSource)
                 .toArray(SqlParameterSource[]::new);
 
@@ -195,19 +160,29 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
             return itemsScannedCount;
         }
 
-        SimpleJdbcInsert songsJdbcInsert = new SimpleJdbcInsert(jdbcTemplate).withTableName(LibraryItemEntity.TABLE_NAME);
+        SimpleJdbcInsert songsJdbcInsert = new SimpleJdbcInsert(jdbcTemplate).withTableName(AudioTrackEntity.TABLE_NAME);
         int[] rows = songsJdbcInsert.executeBatch(sqlParameterSources);
         return rows.length;
     }
 
-    private void updateSong(long songId, List<String> columns, Object... args) {
+    @Override
+    public Collection<Genre> getAllGenres() {
+        return repository.findAllGenres();
+    }
+
+    @Override
+    public void updateAlbumArtworkUrl(String albumId, String artworkUrl) {
+        repository.setAlbumArtworkUrl(albumId, artworkUrl);
+    }
+
+    private void updateAudioTrack(long songId, List<String> columns, Object... args) {
         String columnsString = columns.stream().map(col -> col + " = ?").collect(Collectors.joining(", "));
         String sql = String.format("UPDATE %s SET %s WHERE %s = %s",
-                LibraryItemEntity.TABLE_NAME, columnsString, LibraryItemEntity.COL_ID, songId);
+                AudioTrackEntity.TABLE_NAME, columnsString, AudioTrackEntity.COL_ID, songId);
         jdbcTemplate.update(sql, args);
     }
 
-    private LibraryItemEntity getLibraryItemEntityById(long songId) {
+    private AudioTrackEntity audioTrackEntityById(long songId) {
         return repository.findById(songId)
                 .orElseThrow(() -> PlayqdException.objectDoesNotExistException("Song", String.valueOf(songId)));
     }
@@ -220,40 +195,32 @@ class MediaLibraryDaoImpl implements MediaLibraryDao {
         }
     }
 
-    private Song songFromEntity(LibraryItemEntity entity) {
-        Artist artist = artistFromEntity(entity);
-        Album album = albumFromEntity(entity).artist(artist).build();
-        return Song.builder()
-                .id(entity.getId())
-                .name(entity.getTrackName())
-                .comment(entity.getComment())
-                .lyrics(entity.getLyrics())
-                .trackId(entity.getTrackId())
-                .trackLengthInSeconds(entity.getTrackLength())
-                .audioBitRate(entity.getAudioBitRate())
-                .audioChannelType(entity.getAudioChannelType())
-                .audioEncodingType(entity.getAudioEncodingType())
-                .audioSampleRate(entity.getAudioSampleRate())
-                .fileName(entity.getFileName())
-                .fileExtension(entity.getFileExtension())
-                .fileLocation(entity.getFileLocation())
-                .favorite(entity.isFavorite())
-                .playCount(entity.getPlayCount())
-                .artist(artist)
-                .album(album)
-                .build();
-    }
-
-    private Artist artistFromEntity(LibraryItemEntity entity) {
-        return Artist.builder().id(entity.getArtistId()).name(entity.getArtistName()).build();
-    }
-
-    private Album.AlbumBuilder albumFromEntity(LibraryItemEntity entity) {
-        return Album.builder()
-                .id(entity.getAlbumId())
-                .name(entity.getAlbumName())
-                .year(entity.getAlbumYear())
-                .genre(entity.getAlbumGenre());
+    private AudioTrack fromEntity(AudioTrackEntity entity) {
+        var artist = new Artist(entity.getArtistId(), entity.getArtistName());
+        var album = new Album(
+                entity.getAlbumId(),
+                entity.getAlbumName(),
+                entity.getAlbumYear(),
+                entity.getAlbumGenre(),
+                entity.getAlbumArtworkUrl());
+        return new AudioTrack(
+                entity.getId(),
+                entity.getTrackName(),
+                entity.getComment(),
+                entity.getLyrics(),
+                entity.isFavorite(),
+                entity.getTrackNumber(),
+                entity.getTrackLength(),
+                entity.getAudioBitRate(),
+                entity.getAudioChannelType(),
+                entity.getAudioEncodingType(),
+                entity.getAudioSampleRate(),
+                entity.getFileExtension(),
+                entity.getFileName(),
+                entity.getPlayCount(),
+                entity.getFileLocation(),
+                artist,
+                album);
     }
 
 }

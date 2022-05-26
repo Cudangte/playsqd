@@ -1,21 +1,19 @@
 package com.bemonovoid.playsqd.core.service.impl;
 
-import com.bemonovoid.playsqd.core.dao.MediaLibraryDao;
+import com.bemonovoid.playsqd.core.audio.AudioFileReader;
+import com.bemonovoid.playsqd.core.dao.AudioTrackDao;
 import com.bemonovoid.playsqd.core.service.LibraryEditorService;
 import org.springframework.stereotype.Component;
 
 @Component
-class LibraryEditorServiceImpl implements LibraryEditorService {
-
-    private final MediaLibraryDao mediaLibraryDao;
-
-    public LibraryEditorServiceImpl(MediaLibraryDao mediaLibraryDao) {
-        this.mediaLibraryDao = mediaLibraryDao;
-    }
+public record LibraryEditorServiceImpl(AudioTrackDao audioTrackDao, AudioFileReader audioFileReader)
+        implements LibraryEditorService {
 
     @Override
     public void updateFavoriteStatus(long songId) {
-        mediaLibraryDao.updateFavoriteStatus(songId);
+        audioTrackDao.updateFavoriteStatus(songId);
     }
+
+
 
 }

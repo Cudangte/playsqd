@@ -1,5 +1,6 @@
 package com.bemonovoid.playsqd.core.audio;
 
+import com.bemonovoid.playsqd.core.model.artwork.Artwork;
 import com.bemonovoid.playsqd.core.utils.FileUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.jaudiotagger.tag.FieldKey;
@@ -131,12 +132,12 @@ record JTaggerAudioFile(org.jaudiotagger.audio.AudioFile jTaggerAudioFile) imple
     }
 
     @Override
-    public Optional<byte[]> getArtwork() {
+    public Artwork getArtwork() {
         Tag tag = jTaggerAudioFile.getTag();
         if (tag != null && tag.getFirstArtwork() != null) {
-            return Optional.ofNullable(tag.getFirstArtwork().getBinaryData());
+            return new Artwork(tag.getFirstArtwork());
         }
-        return Optional.empty();
+        return Artwork.empty();
     }
 
     private String readFromTag(FieldKey key) {
@@ -146,8 +147,8 @@ record JTaggerAudioFile(org.jaudiotagger.audio.AudioFile jTaggerAudioFile) imple
                     .map(String::trim)
                     .orElse(null);
         } catch (UnsupportedOperationException e) {
-            log.error("Failed to read {} tag from path {}. \n {}",
-                    key, jTaggerAudioFile.getFile().getAbsolutePath(), e.getMessage());
+            log.error("Failed to read from {} tag in audio file:  {}. \n {}",
+                    key.name(), jTaggerAudioFile.getFile().getAbsolutePath(), e.getMessage());
             return null;
         }
     }

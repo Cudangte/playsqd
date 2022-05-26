@@ -11,12 +11,12 @@ import org.springframework.data.relational.core.mapping.Table;
 
 @AllArgsConstructor(onConstructor=@__({@PersistenceConstructor}))
 @Getter
-@Table(LibraryItemEntity.TABLE_NAME)
+@Table(AudioTrackEntity.TABLE_NAME)
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-public class LibraryItemEntity extends AuditableEntity {
+public class AudioTrackEntity extends AuditableEntity {
 
-    public static final String TABLE_NAME = "LIBRARY_ITEM";
+    public static final String TABLE_NAME = "AUDIO_TRACK";
 
     public static final String COL_ID = "ID";
 
@@ -30,9 +30,10 @@ public class LibraryItemEntity extends AuditableEntity {
     public static final String COL_ALBUM_NAME = "ALBUM_NAME";
     public static final String COL_ALBUM_YEAR = "ALBUM_YEAR";
     public static final String COL_ALBUM_GENRE = "ALBUM_GENRE";
+    public static final String COL_ALBUM_ARTWORK_URL = "ALBUM_ARTWORK_URL";
 
     public static final String COL_TRACK_NAME = "TRACK_NAME";
-    public static final String COL_TRACK_ID = "TRACK_ID";
+    public static final String COL_TRACK_NUMBER = "TRACK_NUMBER";
     public static final String COL_TRACK_LENGTH = "TRACK_LENGTH";
     public static final String COL_TRACK_COMMENT = "TRACK_COMMENT";
     public static final String COL_TRACK_LYRICS = "TRACK_LYRICS";
@@ -80,11 +81,14 @@ public class LibraryItemEntity extends AuditableEntity {
     @Column(COL_ALBUM_GENRE)
     private String albumGenre;
 
+    @Column(COL_ALBUM_ARTWORK_URL)
+    private String albumArtworkUrl;
+
     @Column(COL_TRACK_NAME)
     private String trackName;
 
-    @Column(COL_TRACK_ID)
-    private int trackId;
+    @Column(COL_TRACK_NUMBER)
+    private int trackNumber;
 
     @Column(COL_TRACK_LENGTH)
     private int trackLength;

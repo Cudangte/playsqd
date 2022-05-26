@@ -1,4 +1,4 @@
 package com.bemonovoid.playsqd.core.model;
 
-public record ChannelSong(Song song, long currentPosition) {
+public record ChannelSong(AudioTrack audioTrack, long currentPosition) {
 }

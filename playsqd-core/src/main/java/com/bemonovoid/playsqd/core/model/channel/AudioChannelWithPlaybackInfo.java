@@ -5,7 +5,8 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 import java.util.Collection;
 
-public record AudioChannelWithPlaybackHistoryItems(
+public record AudioChannelWithPlaybackInfo(
         @JsonUnwrapped AudioChannel audioChannel,
-        @JsonProperty("playback_history_items") Collection<AudioChannelPlaybackItem> playbackItems) {
+        @JsonProperty("played_tracks") Collection<AudioChannelPlayedTrack> playedTracks,
+        @JsonProperty("total_track_count") AudioTrackCountQueryResult totalTrackCount) {
 }

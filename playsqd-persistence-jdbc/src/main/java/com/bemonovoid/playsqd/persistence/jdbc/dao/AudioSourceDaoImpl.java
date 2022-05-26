@@ -6,7 +6,7 @@ import com.bemonovoid.playsqd.core.model.AudioSource;
 import com.bemonovoid.playsqd.core.model.AudioSourceScanLog;
 import com.bemonovoid.playsqd.core.model.ScanStatus;
 import com.bemonovoid.playsqd.persistence.jdbc.entity.AudioSourceEntity;
-import com.bemonovoid.playsqd.persistence.jdbc.entity.AudioSourceLogEntity;
+import com.bemonovoid.playsqd.persistence.jdbc.entity.AudioSourceEventEntity;
 import com.bemonovoid.playsqd.persistence.jdbc.repository.AudioSourceLogRepository;
 import com.bemonovoid.playsqd.persistence.jdbc.repository.AudioSourceRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -84,7 +84,7 @@ class AudioSourceDaoImpl implements AudioSourceDao {
 
     @Override
     public void saveLog(AudioSourceScanLog scanLog) {
-        AudioSourceLogEntity entity = AudioSourceLogEntity.builder()
+        AudioSourceEventEntity entity = AudioSourceEventEntity.builder()
                 .sourceId(scanLog.sourceId())
                 .itemsScanned(scanLog.itemsScanned())
                 .itemsMissing(scanLog.itemsMissing())

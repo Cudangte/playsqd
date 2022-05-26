@@ -1,6 +1,6 @@
 package com.bemonovoid.playsqd.core.audio;
 
-import java.util.Optional;
+import com.bemonovoid.playsqd.core.model.artwork.Artwork;
 
 public interface AudioFile {
 
@@ -38,6 +38,6 @@ public interface AudioFile {
 
     String getChannels();
 
-    Optional<byte[]> getArtwork();
+    Artwork getArtwork();
 
 }

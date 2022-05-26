@@ -2,9 +2,11 @@ package com.bemonovoid.playsqd.rest.api.controller;
 
 import com.bemonovoid.playsqd.core.model.AlbumInfo;
 import com.bemonovoid.playsqd.core.model.ArtistInfo;
-import com.bemonovoid.playsqd.core.model.Song;
+import com.bemonovoid.playsqd.core.model.artwork.Artwork;
+import com.bemonovoid.playsqd.core.model.AudioTrack;
 import com.bemonovoid.playsqd.core.service.AlbumSearchCriteria;
 import com.bemonovoid.playsqd.core.service.ArtistSearchCriteria;
+import com.bemonovoid.playsqd.core.service.AudioTrackQueryService;
 import com.bemonovoid.playsqd.core.service.LibraryEditorService;
 import com.bemonovoid.playsqd.core.service.LibraryQueryService;
 import com.bemonovoid.playsqd.core.service.PageableInfo;
@@ -21,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.constraints.Positive;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @Validated
@@ -30,11 +31,15 @@ import java.util.concurrent.TimeUnit;
 public class LibraryController {
 
     private final LibraryQueryService libraryQueryService;
+    private final AudioTrackQueryService audioTrackQueryService;
     private final LibraryEditorService libraryEditorService;
 
-    public LibraryController(LibraryQueryService libraryQueryService, LibraryEditorService libraryEditorService) {
+    public LibraryController(LibraryQueryService libraryQueryService,
+                             AudioTrackQueryService audioTrackQueryService,
+                             LibraryEditorService libraryEditorService) {
         this.libraryQueryService = libraryQueryService;
         this.libraryEditorService = libraryEditorService;
+        this.audioTrackQueryService = audioTrackQueryService;
     }
 
     @GetMapping("/artists")
@@ -59,31 +64,22 @@ public class LibraryController {
         return new PageableResponse<>(libraryQueryService.getAlbums(AlbumSearchCriteria.forArtistId(artistId)));
     }
 
-    @GetMapping(path = "artists/{artistId}/artwork", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
-    ResponseEntity<byte[]> artistArtwork(@PathVariable String artistId) {
-        Optional<byte[]> albumArtworkOpt = libraryQueryService.getArtistArtwork(artistId);
-        return albumArtworkOpt
-                .map(artwork -> ResponseEntity.ok().cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS)).body(artwork))
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
+//    @GetMapping(path = "artists/{artistId}/artwork", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
+//    ResponseEntity<byte[]> artistArtwork(@PathVariable String artistId) {
+//        Optional<byte[]> albumArtworkOpt = libraryQueryService.getArtistArtwork(artistId);
+//        return albumArtworkOpt
+//                .map(artwork -> ResponseEntity.ok().cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS)).body(artwork))
+//                .orElseGet(() -> ResponseEntity.notFound().build());
+//    }
 
     @GetMapping("albums/{albumId}/songs")
-    PageableResponse<Song> artistAlbumSongs(@PathVariable String albumId) {
+    PageableResponse<AudioTrack> artistAlbumSongs(@PathVariable String albumId) {
         return new PageableResponse<>(libraryQueryService.getArtistAlbumSongs(albumId));
     }
 
-    @GetMapping(path = "/albums/{albumId}/artwork", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
-    ResponseEntity<byte[]> albumArtwork(@PathVariable String albumId) {
-//        String artistId = FileUtils.fileNameWithoutExtension(artworkId);
-        Optional<byte[]> albumArtworkOpt = libraryQueryService.getAlbumArtwork(albumId);
-        return albumArtworkOpt
-                .map(artwork -> ResponseEntity.ok().cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS)).body(artwork))
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/songs/{songId}")
-    Song song(@PathVariable long songId) {
-        return libraryQueryService.getSong(songId);
+    @GetMapping("/tracks/{trackId}")
+    AudioTrack song(@PathVariable long trackId) {
+        return libraryQueryService.getAudioTrack(trackId);
     }
 
     @PutMapping("/songs/favorite/{songId}")

@@ -2,6 +2,8 @@ package com.bemonovoid.playsqd.rest.api.controller;
 
 import com.bemonovoid.playsqd.core.exception.PlayqdException;
 import com.bemonovoid.playsqd.core.service.LibraryQueryService;
+import com.bemonovoid.playsqd.core.utils.AudioFileExtension;
+import com.bemonovoid.playsqd.core.utils.FileUtils;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -26,23 +28,23 @@ class AudioStreamController {
 
     /**
      * See: Spring's {@link AbstractMessageConverterMethodProcessor} implementation that handles byte ranges
-     * @param streamingItemId
+     * @param trackId
      * @return Audio file stream at the given byte range.
      */
-    @GetMapping("/{streamingItemId}")
-    ResponseEntity<Resource> audioStream(@PathVariable long streamingItemId) {
+    @GetMapping("/{trackId}")
+    ResponseEntity<Resource> audioTrackStream(@PathVariable long trackId) {
 
-        String fileLocation = libraryQueryService.getSong(streamingItemId).getFileLocation();
-        String fileType = fileLocation.substring(fileLocation.lastIndexOf(".") + 1);
-        if ("mp3".equalsIgnoreCase(fileType)) {
-            fileType = "mpeg";
-        } else if ("wma".equalsIgnoreCase(fileType)) {
+        String fileLocation = libraryQueryService.getAudioTrack(trackId).fileLocation();
+        String fileExtension = FileUtils.getFileExtension(fileLocation);
+        if (AudioFileExtension.MP3.valueEqualsIgnoreCase(fileExtension)) {
+            fileExtension = AudioFileExtension.MPEG.getValue();
+        } else if (AudioFileExtension.WMA.valueEqualsIgnoreCase(fileExtension)) {
             throw PlayqdException.ioException("'wma' audio format is not supported", 400);
-        } else if ("oga".equalsIgnoreCase(fileType)) {
-            fileType = "ogg";
+        } else if (AudioFileExtension.OGA.valueEqualsIgnoreCase(fileExtension)) {
+            fileExtension = AudioFileExtension.OGG.getValue();
         }
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, "audio/" + fileType)
+                .header(HttpHeaders.CONTENT_TYPE, "audio/" + fileExtension)
                 .body(new FileSystemResource(Paths.get(fileLocation)));
     }
 
