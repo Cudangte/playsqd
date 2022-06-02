@@ -1,6 +1,7 @@
 package com.bemonovoid.playsqd.core.service;
 
 import com.bemonovoid.playsqd.core.model.AudioSource;
+import com.bemonovoid.playsqd.core.model.AudioSourceWithContent;
 import com.bemonovoid.playsqd.core.model.SourceContentItem;
 
 import java.util.Collection;
@@ -12,7 +13,7 @@ public interface AudioSourceService {
 
     AudioSource getById(long sourceId);
 
-    List<SourceContentItem> getFoldersInSourcePath(long sourceId, String path);
+    AudioSourceWithContent getAudioSourceWithContentForPath(long sourceId, String path);
 
     long create(AudioSource source);
 

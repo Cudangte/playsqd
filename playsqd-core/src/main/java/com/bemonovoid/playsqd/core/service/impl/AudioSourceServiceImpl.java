@@ -3,6 +3,8 @@ package com.bemonovoid.playsqd.core.service.impl;
 import com.bemonovoid.playsqd.core.dao.AudioSourceDao;
 import com.bemonovoid.playsqd.core.exception.PlayqdException;
 import com.bemonovoid.playsqd.core.model.AudioSource;
+import com.bemonovoid.playsqd.core.model.AudioSourceWithContent;
+import com.bemonovoid.playsqd.core.model.SourceContent;
 import com.bemonovoid.playsqd.core.model.SourceContentItem;
 import com.bemonovoid.playsqd.core.publisher.event.AudioSourceCreatedEvent;
 import com.bemonovoid.playsqd.core.service.AudioSourceService;
@@ -72,15 +74,16 @@ class AudioSourceServiceImpl implements AudioSourceService {
     }
 
     @Override
-    public List<SourceContentItem> getFoldersInSourcePath(long sourceId, String path) {
+    public AudioSourceWithContent getAudioSourceWithContentForPath(long sourceId, String path) {
         AudioSource source = getById(sourceId);
         Path lookUpPath = Path.of(source.path(), path != null ? path : "");
         try (Stream<Path> files = Files.list(lookUpPath)) {
-            return files
+            List<SourceContentItem> items = files
                     .map(Path::toFile)
                     .filter(f -> f.isDirectory() || (f.isFile() && FileUtils.isSupportedAudioFile(f)))
                     .map(AudioSourceServiceImpl::fromFile)
                     .collect(Collectors.toList());
+            return new AudioSourceWithContent(source, new SourceContent(lookUpPath.toString(), items));
         } catch (IOException e) {
             throw PlayqdException.ioException("Failed to read from path", e);
         }
@@ -88,11 +91,19 @@ class AudioSourceServiceImpl implements AudioSourceService {
 
     private static SourceContentItem fromFile(File file) {
         if (file.isFile()) {
-            var fileNameExtension = FileUtils.parseFileNameAndExtension(file.getName());
+            var fileNameAndExtension = FileUtils.parseFileNameAndExtension(file.getName());
             return new SourceContentItem(
-                    fileNameExtension.left(), fileNameExtension.right(), true);
+                    fileNameAndExtension.left(),
+                    false,
+                    true,
+                    fileNameAndExtension.right());
         }
-        return new SourceContentItem(file.getName(), null, false);
+        var fileName = file.getName();
+        return new SourceContentItem(
+                fileName,
+                true,
+                false,
+                null);
     }
 
     private static void validatePath(String path) {

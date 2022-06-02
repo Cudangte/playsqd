@@ -6,6 +6,8 @@ final class ApiEndpoints {
 
     static final String CHANNEL_API_PATH = BASE_API_PATH + "/channels";
 
+    static final String SOURCE_API_PATH = BASE_API_PATH + "/sources";
+
     static final String STREAM_API_PATH = BASE_API_PATH + "/stream";
 
     static final String LIBRARY_API_PATH = BASE_API_PATH + "/library";

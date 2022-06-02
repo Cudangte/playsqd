@@ -1,7 +1,12 @@
 package com.bemonovoid.playsqd.rest.api.controller;
 
+import java.net.URI;
+import java.util.Collection;
+
+import javax.validation.Valid;
+
 import com.bemonovoid.playsqd.core.model.AudioSource;
-import com.bemonovoid.playsqd.core.model.SourceContentItem;
+import com.bemonovoid.playsqd.core.model.AudioSourceWithContent;
 import com.bemonovoid.playsqd.core.service.AudioSourceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,13 +22,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import javax.validation.Valid;
-import java.net.URI;
-import java.util.Collection;
-import java.util.List;
-
 @RestController
-@RequestMapping(ApiEndpoints.SETTINGS_API_PATH + "/sources")
+@RequestMapping(ApiEndpoints.SOURCE_API_PATH)
 class AudioSourceController {
 
     private final AudioSourceService audioSourceService;
@@ -46,10 +46,10 @@ class AudioSourceController {
         return audioSourceService.getById(sourceId);
     }
 
-    @GetMapping("/{sourceId}/folders")
-    List<SourceContentItem> folders(@PathVariable long sourceId,
-                                    @RequestParam(name = "path", required = false) String path) {
-       return audioSourceService.getFoldersInSourcePath(sourceId, path);
+    @GetMapping("/{sourceId}/content")
+    AudioSourceWithContent content(@PathVariable long sourceId,
+                                   @RequestParam(name = "path", required = false) String path) {
+       return audioSourceService.getAudioSourceWithContentForPath(sourceId, path);
     }
 
     @PatchMapping

@@ -3,6 +3,8 @@ package com.bemonovoid.playsqd.core.utils;
 import com.bemonovoid.playsqd.core.model.Tuple;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Set;
 
 public abstract class FileUtils {
@@ -38,4 +40,5 @@ public abstract class FileUtils {
         var extension = fileName.substring(extensionSeparatorIdx + 1);
         return new Tuple<>(name, extension);
     }
+
 }
