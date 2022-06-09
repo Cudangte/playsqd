@@ -34,6 +34,8 @@ public interface AudioChannelDao {
 
     void deletePlayedTracksByChannelId(long channelId);
 
+    void updatePlayedTrackPlaybackInfo(long channelId, String playbackInfo);
+
     default AudioChannelNowPlayingTrack findChannelStreamInfoByChannelIdOrThrow(long channelId) {
         return findNowPLayingTrackByChannelId(channelId)
                 .orElseThrow(() -> PlayqdException.objectDoesNotExistException(channelId, "AudioChannelStreamInfo"));

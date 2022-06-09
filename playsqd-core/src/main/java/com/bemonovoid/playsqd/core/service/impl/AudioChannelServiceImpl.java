@@ -68,7 +68,7 @@ record AudioChannelServiceImpl(ApplicationEventPublisher publisher,
         var mayBeNowPLayingTrack = audioChannelDao.findNowPLayingTrackByChannelId(channelId);
 
         if (mayBeNowPLayingTrack.isEmpty()) {
-            var audioTrack = getNextChannelSongToPlay(getChannel(channelId));
+            var audioTrack = selectNextTrackToPlay(getChannel(channelId));
             var nowPlayingTrack = audioChannelDao.createNowPlayingTrack(channelId, audioTrack);
 
             publishAudioTrackIsNowPlayingEvent(channelId, audioTrack.id());
@@ -83,7 +83,7 @@ record AudioChannelServiceImpl(ApplicationEventPublisher publisher,
                 log.info("Steaming item with id: '{}' may have reached the end, searching for next item to stream ...",
                         nowPlayingTrack.audioTrackId());
 
-                var audioTrack = getNextChannelSongToPlay(getChannel(channelId));
+                var audioTrack = selectNextTrackToPlay(getChannel(channelId));
 
                 log.info("Next streaming item has successfully resolved to item with id: {}", audioTrack.id());
 
@@ -108,17 +108,22 @@ record AudioChannelServiceImpl(ApplicationEventPublisher publisher,
         return audioChannelDao.findAll();
     }
 
+    @Override
+    public void skipNowPlayingTrack(long channelId, String reason) {
+        audioChannelDao.updatePlayedTrackPlaybackInfo(channelId, reason);
+    }
+
     private void publishAudioTrackIsNowPlayingEvent(long channelId, long audioTrackId) {
         publisher.publishEvent(new AudioChannelTrackIsNowPlayingEvent(this, channelId, audioTrackId));
     }
 
-    private AudioTrack getNextChannelSongToPlay(AudioChannel channel) {
-        Optional<AudioTrack> nextSong = findRandomGenreSongNotYetStreamedByChannelId(channel.id(), channel.sources());
-        if (nextSong.isEmpty() && audioChannelConfiguration.isRepeatAll()) {
+    private AudioTrack selectNextTrackToPlay(AudioChannel channel) {
+        Optional<AudioTrack> nextTrack = findRandomGenreSongNotYetStreamedByChannelId(channel.id(), channel.sources());
+        if (nextTrack.isEmpty() && audioChannelConfiguration.isRepeatAll()) {
             audioChannelDao.deletePlayedTracksByChannelId(channel.id());
-            nextSong = findRandomGenreSongNotYetStreamedByChannelId(channel.id(), channel.sources());
+            nextTrack = findRandomGenreSongNotYetStreamedByChannelId(channel.id(), channel.sources());
         }
-        return nextSong.orElseThrow(() -> PlayqdException.objectDoesNotExistException(channel.sources(), "GenreSong"));
+        return nextTrack.orElseThrow(() -> PlayqdException.objectDoesNotExistException(channel.sources(), "GenreSong"));
     }
 
     private Optional<AudioTrack> findRandomGenreSongNotYetStreamedByChannelId(long channelId, Collection<String> genres) {

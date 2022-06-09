@@ -10,7 +10,6 @@ import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 
-import javax.swing.text.html.Option;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -46,7 +45,19 @@ public interface AudioTrackRepository extends CrudRepository<AudioTrackEntity, L
 
     long artistsCount();
 
-    long artistsLikeCount(@Param("artistNameLike") String artistNameLike);
+    /**
+     * Named query
+     * @param artistNameLike
+     * @return
+     */
+    long artistsLikeCount(@Param("nameLike") String artistNameLike);
+
+    /**
+     * Named query
+     * @param nameStartsWith
+     * @return
+     */
+    long artistsStartWithCount(@Param("nameStartsWith") String nameStartsWith);
 
     long albumsCount();
 
@@ -54,15 +65,35 @@ public interface AudioTrackRepository extends CrudRepository<AudioTrackEntity, L
 
     List<ArtistInfo> pageableArtists(@Param("pageSize") int pageSize, @Param("offset") long offset);
 
+    /**
+     * Name query
+     * @param pageSize
+     * @param offset
+     * @param artistNameLike
+     * @return
+     */
     List<ArtistInfo> pageableArtistsLike(@Param("pageSize") int pageSize,
                                          @Param("offset") long offset,
-                                         @Param("artistNameLike") String artistNameLike);
+                                         @Param("nameLike") String artistNameLike);
+
+    /**
+     * Name query
+     * @param pageSize
+     * @param offset
+     * @param nameStartsWith
+     * @return
+     */
+    List<ArtistInfo> pageableArtistsStartWith(@Param("pageSize") int pageSize,
+                                              @Param("offset") long offset,
+                                              @Param("nameStartsWith") String nameStartsWith);
 
     List<AlbumInfo> artistAlbums(@Param("artistId") String artistId);
 
     List<AlbumInfo> pageableAlbumsLike(@Param("pageSize") int pageSize,
                                        @Param("offset") long offset,
                                        @Param("albumNameLike") String artistNameLike);
+
+    Stream<AudioTrackEntity> getAllByFileLocationStartsWith(String location);
 
     void deleteAllByFileLocationStartsWith(String location);
 

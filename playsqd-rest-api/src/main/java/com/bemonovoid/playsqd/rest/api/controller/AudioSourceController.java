@@ -2,11 +2,13 @@ package com.bemonovoid.playsqd.rest.api.controller;
 
 import java.net.URI;
 import java.util.Collection;
+import java.util.List;
 
 import javax.validation.Valid;
 
 import com.bemonovoid.playsqd.core.model.AudioSource;
 import com.bemonovoid.playsqd.core.model.AudioSourceWithContent;
+import com.bemonovoid.playsqd.core.model.AudioTrack;
 import com.bemonovoid.playsqd.core.service.AudioSourceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -50,6 +52,12 @@ class AudioSourceController {
     AudioSourceWithContent content(@PathVariable long sourceId,
                                    @RequestParam(name = "path", required = false) String path) {
        return audioSourceService.getAudioSourceWithContentForPath(sourceId, path);
+    }
+
+    @GetMapping("/{sourceId}/content/tracks")
+    List<AudioTrack> audioTracksFromPathInSource(@PathVariable long sourceId,
+                                  @RequestParam(name = "path") String path) {
+        return audioSourceService.audioTracksFromPathInSource(sourceId, path);
     }
 
     @PatchMapping

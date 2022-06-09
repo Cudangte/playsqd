@@ -1,14 +1,17 @@
 package com.bemonovoid.playsqd.core.service.impl;
 
 import com.bemonovoid.playsqd.core.dao.AudioSourceDao;
+import com.bemonovoid.playsqd.core.dao.AudioTrackDao;
 import com.bemonovoid.playsqd.core.exception.PlayqdException;
 import com.bemonovoid.playsqd.core.model.AudioSource;
 import com.bemonovoid.playsqd.core.model.AudioSourceWithContent;
+import com.bemonovoid.playsqd.core.model.AudioTrack;
 import com.bemonovoid.playsqd.core.model.SourceContent;
 import com.bemonovoid.playsqd.core.model.SourceContentItem;
 import com.bemonovoid.playsqd.core.publisher.event.AudioSourceCreatedEvent;
 import com.bemonovoid.playsqd.core.service.AudioSourceService;
 import com.bemonovoid.playsqd.core.utils.FileUtils;
+import com.bemonovoid.playsqd.core.utils.RandomStrings;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
@@ -18,21 +21,18 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Component
-class AudioSourceServiceImpl implements AudioSourceService {
-
-    private final AudioSourceDao audioSourceDao;
-    private final ApplicationEventPublisher eventPublisher;
-
-    AudioSourceServiceImpl(AudioSourceDao audioSourceDao, ApplicationEventPublisher eventPublisher) {
-        this.audioSourceDao = audioSourceDao;
-        this.eventPublisher = eventPublisher;
-    }
+record AudioSourceServiceImpl(ApplicationEventPublisher eventPublisher,
+                              AudioSourceDao audioSourceDao,
+                              AudioTrackDao audioTrackDao) implements AudioSourceService {
 
     @Override
     public Collection<AudioSource> getAll() {
@@ -78,32 +78,50 @@ class AudioSourceServiceImpl implements AudioSourceService {
         AudioSource source = getById(sourceId);
         Path lookUpPath = Path.of(source.path(), path != null ? path : "");
         try (Stream<Path> files = Files.list(lookUpPath)) {
-            List<SourceContentItem> items = files
+
+            Map<Boolean, List<SourceContentItem>> items = files
                     .map(Path::toFile)
                     .filter(f -> f.isDirectory() || (f.isFile() && FileUtils.isSupportedAudioFile(f)))
                     .map(AudioSourceServiceImpl::fromFile)
-                    .collect(Collectors.toList());
-            return new AudioSourceWithContent(source, new SourceContent(lookUpPath.toString(), items));
+                    .collect(Collectors.groupingBy(SourceContentItem::isFile));
+
+            List<SourceContentItem> dirItems = items.getOrDefault(Boolean.FALSE, Collections.emptyList());
+            List<SourceContentItem> fileItems = items.getOrDefault(Boolean.TRUE, Collections.emptyList());
+
+            List<SourceContentItem> contentItems = new ArrayList<>(dirItems.size() + fileItems.size());
+
+            contentItems.addAll(dirItems);
+            contentItems.addAll(fileItems);
+
+            return new AudioSourceWithContent(source, new SourceContent(lookUpPath.toString(), contentItems));
         } catch (IOException e) {
             throw PlayqdException.ioException("Failed to read from path", e);
         }
     }
 
-    private static SourceContentItem fromFile(File file) {
-        if (file.isFile()) {
-            var fileNameAndExtension = FileUtils.parseFileNameAndExtension(file.getName());
-            return new SourceContentItem(
-                    fileNameAndExtension.left(),
-                    false,
-                    true,
-                    fileNameAndExtension.right());
+    @Override
+    public List<AudioTrack> audioTracksFromPathInSource(long sourceId, String path) {
+        AudioSource source = getById(sourceId);
+        Path lookUpPath = Path.of(source.path(), path);
+        if (!Files.exists(lookUpPath)) {
+            String message = String.format("Path does not exist: %s", lookUpPath);
+            throw PlayqdException.ioException(message, 400);
         }
-        var fileName = file.getName();
+        return audioTrackDao.getAllByFileLocationStartsWith(lookUpPath.toString());
+    }
+
+    private static SourceContentItem fromFile(File file) {
+        String fileName = file.getName();
+        String fileExtension = null;
+        String fileSizeHumanReadable = FileUtils.fileDisplaySize(file);
+        var isFile = file.isFile();
+        if (isFile) {
+            var fileNameAndExtension = FileUtils.parseFileNameAndExtension(file.getName());
+            fileName = fileNameAndExtension.left();
+            fileExtension = fileNameAndExtension.right();
+        }
         return new SourceContentItem(
-                fileName,
-                true,
-                false,
-                null);
+                RandomStrings.randomAlphabetic(8), fileName, isFile, fileExtension, fileSizeHumanReadable);
     }
 
     private static void validatePath(String path) {

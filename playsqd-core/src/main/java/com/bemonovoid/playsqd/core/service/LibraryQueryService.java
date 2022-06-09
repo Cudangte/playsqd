@@ -10,8 +10,6 @@ import java.util.Optional;
 
 public interface LibraryQueryService {
 
-    PageableResult<ArtistInfo> getArtists(ArtistSearchCriteria searchCriteria);
-
     PageableResult<AlbumInfo> getAlbums(AlbumSearchCriteria searchCriteria);
 
     PageableResult<AudioTrack> getArtistAlbumSongs(String albumId);

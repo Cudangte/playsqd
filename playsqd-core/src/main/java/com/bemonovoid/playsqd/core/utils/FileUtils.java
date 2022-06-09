@@ -41,4 +41,13 @@ public abstract class FileUtils {
         return new Tuple<>(name, extension);
     }
 
+    public static String fileDisplaySize(File file) {
+        if (file.isFile()) {
+            return org.apache.commons.io.FileUtils.byteCountToDisplaySize(file.length());
+        } else {
+            var dirSize = org.apache.commons.io.FileUtils.sizeOfDirectoryAsBigInteger(file);
+            return org.apache.commons.io.FileUtils.byteCountToDisplaySize(dirSize);
+        }
+    }
+
 }

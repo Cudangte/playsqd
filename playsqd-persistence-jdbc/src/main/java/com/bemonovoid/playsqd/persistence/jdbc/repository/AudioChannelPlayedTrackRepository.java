@@ -16,4 +16,9 @@ public interface AudioChannelPlayedTrackRepository extends CrudRepository<AudioC
     @Modifying
     @Query("DELETE FROM AUDIO_CHANNEL_PLAYED_TRACK h WHERE h.AUDIO_CHANNEL_ID = :channelId")
     int deleteAllByChannelId(@Param("channelId") long channelId);
+
+    @Modifying
+    @Query("UPDATE AUDIO_CHANNEL_PLAYED_TRACK SET AUDIO_TRACK_PLAYBACK_INFO = :playbackInfo, LAST_MODIFIED_BY = 'system', LAST_MODIFIED_DATE = :lastModifiedAt " +
+            "WHERE AUDIO_CHANNEL_ID = :channelId AND AUDIO_TRACK_ID = :trackId")
+    boolean setPlayedTrackPlaybackInfo(long channelId, long trackId, String playbackInfo);
 }

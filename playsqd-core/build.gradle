@@ -14,6 +14,8 @@ dependencies {
     implementation "javax.validation:validation-api:${javaxValidationVersion}"
     implementation "com.fasterxml.jackson.core:jackson-annotations:${fasterXmlVersion}"
     implementation "org.springframework:spring-context:${springFrameworkVersion}"
+    implementation "commons-io:commons-io:${commonsIoVersion}"
     implementation "org.apache.commons:commons-lang3"
+
 }
 

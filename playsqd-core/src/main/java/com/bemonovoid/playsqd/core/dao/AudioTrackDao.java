@@ -44,6 +44,8 @@ public interface AudioTrackDao {
 
     void updateFavoriteStatus(long trackId);
 
+    List<AudioTrack> getAllByFileLocationStartsWith(String location);
+
     void deleteAllByLocation(String location);
 
     void updateAlbumArtworkUrl(String albumId, String artworkUrl);

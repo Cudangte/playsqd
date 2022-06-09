@@ -24,4 +24,6 @@ public interface AudioChannelService {
     AudioChannelTrack audioChannelNowPlayingTrack(long channelId);
 
     List<AudioChannel> getAllChannels();
+
+    void skipNowPlayingTrack(long channelId, String reason);
 }

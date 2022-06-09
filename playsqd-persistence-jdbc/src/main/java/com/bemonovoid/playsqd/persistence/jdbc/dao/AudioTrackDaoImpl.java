@@ -49,9 +49,15 @@ record AudioTrackDaoImpl(JdbcTemplate jdbcTemplate, AudioTrackRepository reposit
         int pageSize = searchCriteria.pageableInfo().pageSize();
         long offset = (page - 1L) * pageSize;
 
-        if (StringUtils.hasText(searchCriteria.artistNameLike())) {
+        if (StringUtils.hasText(searchCriteria.nameLike())) {
             artistInfos =
-                    repository.pageableArtistsLike(pageSize, offset, searchCriteria.artistNameLike().toUpperCase());
+                    repository.pageableArtistsLike(pageSize, offset, searchCriteria.nameLike().toUpperCase());
+        } else if (StringUtils.hasText(searchCriteria.nameStartsWith())) {
+            var startsWith = searchCriteria.nameStartsWith().toUpperCase();
+            if (startsWith.equals("NUMBER")) {
+                startsWith = "[0-9]";
+            }
+            artistInfos = repository.pageableArtistsStartWith(pageSize, offset, startsWith);
         } else {
             artistInfos = repository.pageableArtists(pageSize, offset);
         }
@@ -144,6 +150,11 @@ record AudioTrackDaoImpl(JdbcTemplate jdbcTemplate, AudioTrackRepository reposit
     }
 
     @Override
+    public List<AudioTrack> getAllByFileLocationStartsWith(String location) {
+        return repository.getAllByFileLocationStartsWith(location).map(this::fromEntity).collect(Collectors.toList());
+    }
+
+    @Override
     public void deleteAllByLocation(String location) {
         repository.deleteAllByFileLocationStartsWith(location);
     }
@@ -188,8 +199,14 @@ record AudioTrackDaoImpl(JdbcTemplate jdbcTemplate, AudioTrackRepository reposit
     }
 
     private long getTotalArtistCount(ArtistSearchCriteria searchCriteria) {
-        if (StringUtils.hasText(searchCriteria.artistNameLike())) {
-            return repository.artistsLikeCount(searchCriteria.artistNameLike());
+        if (StringUtils.hasText(searchCriteria.nameLike())) {
+            return repository.artistsLikeCount(searchCriteria.nameLike());
+        } else if (StringUtils.hasText(searchCriteria.nameStartsWith())) {
+            var startsWith = searchCriteria.nameStartsWith().toUpperCase();
+            if (startsWith.equals("NUMBER")) {
+                startsWith = "[0-9]";
+            }
+            return repository.artistsStartWithCount(startsWith);
         } else {
             return repository.artistsCount();
         }

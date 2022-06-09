@@ -11,8 +11,8 @@ import com.bemonovoid.playsqd.core.model.ScannedAudioFileMetadata;
 import com.bemonovoid.playsqd.core.model.ScannedAudioFileWithMetadata;
 import com.bemonovoid.playsqd.core.service.AudioSourceScanner;
 import com.bemonovoid.playsqd.core.utils.FileUtils;
+import com.bemonovoid.playsqd.core.utils.RandomStrings;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -110,11 +110,11 @@ class AudioSourceScannerImpl implements AudioSourceScanner {
 
     private ScannedAudioFileWithMetadata fromAudioFile(AudioFile audioFile) {
         String artistId =
-                artistIds.computeIfAbsent(audioFile.getArtistName(), key -> RandomStringUtils.randomAlphabetic(8));
+                artistIds.computeIfAbsent(audioFile.getArtistName(), key -> RandomStrings.randomAlphabetic(8));
         Map<String, String> artistAlbums =
                 albumIds.computeIfAbsent(artistId, key -> Collections.synchronizedMap(new LinkedHashMap<>()));
         String albumId =
-                artistAlbums.computeIfAbsent(audioFile.getAlbumName(), key -> RandomStringUtils.randomAlphabetic(8));
+                artistAlbums.computeIfAbsent(audioFile.getAlbumName(), key -> RandomStrings.randomAlphabetic(8));
         return new ScannedAudioFileWithMetadata(audioFile, new ScannedAudioFileMetadata(artistId, albumId));
     }
 

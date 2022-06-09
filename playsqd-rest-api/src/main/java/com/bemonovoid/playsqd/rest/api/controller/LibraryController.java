@@ -42,13 +42,13 @@ public class LibraryController {
         this.audioTrackQueryService = audioTrackQueryService;
     }
 
-    @GetMapping("/artists")
-    PageableResponse<ArtistInfo> artists(@Positive @RequestParam(defaultValue = "1") int page,
-                                         @Positive @RequestParam(name = "page_size", defaultValue = "50") int pageSize,
-                                         @RequestParam(name = "artist_name_like", required = false) String artistNameLike) {
-        var searchCriteria = new ArtistSearchCriteria(artistNameLike, new PageableInfo(page, pageSize));
-        return new PageableResponse<>(libraryQueryService.getArtists(searchCriteria));
-    }
+//    @GetMapping("/artists")
+//    PageableResponse<ArtistInfo> artists(@Positive @RequestParam(defaultValue = "1") int page,
+//                                         @Positive @RequestParam(name = "page_size", defaultValue = "50") int pageSize,
+//                                         @RequestParam(name = "artist_name_like", required = false) String nameLike) {
+//        var searchCriteria = new ArtistSearchCriteria(nameLike, new PageableInfo(page, pageSize));
+//        return new PageableResponse<>(libraryQueryService.getArtists(searchCriteria));
+//    }
 
     @GetMapping("/albums")
     PageableResponse<AlbumInfo> albums(@Positive @RequestParam(defaultValue = "1") int page,

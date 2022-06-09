@@ -101,6 +101,7 @@ record AudioChannelDaoImpl(AudioChannelRepository channelRepository,
                 null,
                 channelId,
                 audioTrackId,
+                null,
                 AuditingEntity.created());
         channelPlayedTrackRepository.save(entity);
     }
@@ -108,6 +109,18 @@ record AudioChannelDaoImpl(AudioChannelRepository channelRepository,
     @Override
     public void deletePlayedTracksByChannelId(long channelId) {
         channelPlayedTrackRepository.deleteAllByChannelId(channelId);
+    }
+
+    @Override
+    public void updatePlayedTrackPlaybackInfo(long channelId, String playbackInfo) {
+        findNowPLayingTrackByChannelId(channelId)
+                .map(AudioChannelNowPlayingTrack::audioTrackId)
+                .ifPresent(trackId ->
+                        channelPlayedTrackRepository.setPlayedTrackPlaybackInfo(
+                                channelId,
+                                trackId,
+                                playbackInfo));
+
     }
 
     private AudioChannel fromChannelEntity(AudioChannelEntity entity) {

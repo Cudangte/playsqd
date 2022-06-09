@@ -2,7 +2,7 @@ package com.bemonovoid.playsqd.core.service;
 
 import com.bemonovoid.playsqd.core.model.AudioSource;
 import com.bemonovoid.playsqd.core.model.AudioSourceWithContent;
-import com.bemonovoid.playsqd.core.model.SourceContentItem;
+import com.bemonovoid.playsqd.core.model.AudioTrack;
 
 import java.util.Collection;
 import java.util.List;
@@ -14,6 +14,8 @@ public interface AudioSourceService {
     AudioSource getById(long sourceId);
 
     AudioSourceWithContent getAudioSourceWithContentForPath(long sourceId, String path);
+
+    List<AudioTrack> audioTracksFromPathInSource(long sourceId, String path);
 
     long create(AudioSource source);
 
